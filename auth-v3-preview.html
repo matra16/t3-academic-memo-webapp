@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>T3 Smart Identity | ลงทะเบียนและเข้าสู่ระบบ (Public Preview)</title>
+<style>
+:root{color-scheme:light;--pine:#176a61;--ink:#1c3333;--muted:#55736f;--line:#dce7e2;--bg:#edf5f1;--white:#fff}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Sarabun",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{width:min(100% - 26px,820px);margin:20px auto 36px}header{background:linear-gradient(115deg,#176c61,#348a7d);color:white;border-radius:17px;padding:23px 25px;box-shadow:0 3px 16px #194d421c}
+header h1{font-size:clamp(1.25rem,3vw,1.65rem);margin:0 0 4px}header p{margin:0;line-height:1.6;font-size:.93rem}
+.preview{font-size:.77rem;letter-spacing:.02em;display:inline-block;color:#f8eacb;border:1px solid #ffffff75;padding:4px 9px;border-radius:999px;margin-bottom:10px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:17px;padding:clamp(17px,3vw,25px);margin-top:13px;box-shadow:0 2px 14px #0b44310d}
+h2{font-size:1.13rem;margin:0 0 9px}p{line-height:1.7;margin:8px 0 12px}small{font-size:.83rem}
+.notice{padding:12px 15px;background:#fff5e0;border-left:4px solid #cc942b;border-radius:7px;line-height:1.65;font-size:.9rem}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}
+.tabs button{border:1px solid #cbded5;background:#f5faf8;border-radius:11px;padding:14px 8px;min-height:65px;cursor:pointer;color:#215750;font:inherit;font-weight:650}
+.tabs button[aria-selected="true"]{background:#e0f2ec;border-color:#29877a;box-shadow:inset 0 0 0 1px #29877a}
+.tabs button:focus-visible,.action:focus-visible,a:focus-visible{outline:3px solid #f2c253;outline-offset:3px}
+.pill{font-size:.72rem;font-weight:650;color:#436960;margin-left:4px;white-space:nowrap}
+.panel{background:#f8fbf9;border:1px solid #dae8e1;border-radius:13px;padding:19px}
+.panel h3{font-size:1.06rem;margin:0 0 7px}.panel p{font-size:.91rem}
+.hidden{display:none!important}#google-button{min-height:45px;display:flex;justify-content:center;margin:16px 0}
+.status{background:#e7f0ec;border-radius:9px;padding:12px;margin-top:11px;font-size:.88rem;line-height:1.65;white-space:pre-line}
+.status[data-tone="success"]{background:#e2f3e9;color:#145a39}
+.status[data-tone="error"]{background:#fff0eb;color:#903b29}
+.action{display:inline-flex;align-items:center;justify-content:center;min-height:46px;background:#207d70;color:white;text-decoration:none;border-radius:10px;padding:12px 18px;font-weight:650}
+.action.secondary{background:#e8f4ee;color:#166758;border:1px solid #a9ccc0}
+.steps{margin:9px 0 3px;padding-left:24px;line-height:1.9;font-size:.93rem}
+.consent{display:flex;align-items:start;gap:9px;margin:11px 0;font-size:.91rem;line-height:1.55}
+.consent input{width:19px;height:19px;flex:none;margin-top:3px;accent-color:#207d70}
+.muted{color:var(--muted)}footer{text-align:center;padding:17px 6px;font-size:.77rem;color:#657b74}
+@media(max-width:560px){.tabs button{font-size:.81rem;min-height:76px;padding:8px 3px}.pill{display:block;margin:3px 0 0}.card{padding:16px}header{padding:20px 17px}}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="preview">PUBLIC PREVIEW • ยังไม่เปิดสิทธิ์ทะเบียน</div>
+  <h1>ลงทะเบียนและเข้าสู่ระบบบุคลากร</h1>
+  <p>ระบบทะเบียนเลขบันทึกข้อความภายใน • กลุ่มงานบริหารงานวิชาการ โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</p>
+</header>
+<main>
+<section class="card" aria-labelledby="head-auth">
+<h2 id="head-auth">เลือกวิธีการเข้าสู่ระบบ</h2>
+<p class="muted">รองรับการออกแบบ 3 ช่องทาง โดยไม่ต้องใช้ Gmail ทุกคน และไม่ใช้ SMS OTP หรือ Passkey</p>
+<div class="notice"><strong>รุ่นทดสอบ Public:</strong> ขณะนี้ทดสอบการเชื่อมต่อ Google ในเบราว์เซอร์ได้เท่านั้น LINE Login และ Email OTP รอระบบยืนยันตัวตนฝั่งเซิร์ฟเวอร์ จึงยังไม่เปิดรับข้อมูลลงทะเบียนจริงเพื่อป้องกันการสวมสิทธิ์บุคลากร</div>
+<div class="tabs" role="tablist" aria-label="วิธีเข้าสู่ระบบ">
+  <button type="button" id="tab-google" role="tab" aria-controls="panel-google" aria-selected="true" tabindex="0" data-tab="google">Google <span class="pill">ทดสอบได้</span></button>
+  <button type="button" id="tab-line" role="tab" aria-controls="panel-line" aria-selected="false" tabindex="-1" data-tab="line">LINE <span class="pill">รอเชื่อมต่อ</span></button>
+  <button type="button" id="tab-email" role="tab" aria-controls="panel-email" aria-selected="false" tabindex="-1" data-tab="email">Email OTP <span class="pill">รอเชื่อมต่อ</span></button>
+</div>
+<div id="panel-google" class="panel" role="tabpanel" aria-labelledby="tab-google">
+  <h3>Google Sign-In</h3>
+  <p>ใช้บัญชี Google ที่ได้รับอนุญาตให้ทดสอบ (ยังไม่ใช่การเข้าสู่ทะเบียนจริง)</p>
+  <label class="consent"><input type="checkbox" id="ack" autocomplete="off"><span>รับทราบว่านี่เป็นหน้าทดสอบ และการรับ Credential ในเบราว์เซอร์ยังไม่หมายถึงการลงทะเบียนหรือได้รับสิทธิ์ใช้งาน</span></label>
+  <div id="google-button" aria-label="ปุ่ม Google Sign-In"></div>
+  <div id="google-status" class="status" data-tone="neutral" role="status" aria-live="polite">กรุณาทำเครื่องหมายรับทราบเพื่อเปิดปุ่มทดสอบ Google</div>
+</div>
+<div id="panel-line" class="panel hidden" role="tabpanel" aria-labelledby="tab-line">
+  <h3>LINE Login</h3>
+  <p>ออกแบบสำหรับครูที่ใช้ LINE อยู่แล้ว โดยจะยืนยัน LINE User ID กับเซิร์ฟเวอร์ และผูกบัญชีหลังตรวจสอบข้อมูลบุคลากรจริง</p>
+  <p class="status">ยังไม่เปิดใช้: ต้องตั้งค่า LINE Login Channel, Callback URL, การตรวจ OAuth State/PKCE และการผูกบัญชีที่ได้รับอนุมัติก่อน</p>
+  <p class="muted">ไม่มีการขอรหัสผ่าน LINE หรือเปิดฟอร์มให้กรอกข้อมูลบุคลากรบนหน้า Public นี้</p>
+</div>
+<div id="panel-email" class="panel hidden" role="tabpanel" aria-labelledby="tab-email">
+  <h3>Email OTP</h3>
+  <p>ออกแบบสำหรับผู้ที่ใช้อีเมลทั่วไป เช่น Outlook, Hotmail, Yahoo หรืออีเมลองค์กร</p>
+  <p class="status">ยังไม่เปิดใช้: ต้องมีระบบส่งรหัสครั้งเดียวที่ใช้ได้จริง พร้อมหมดอายุ ตรวจซ้ำ/จำกัดครั้ง และผูกข้อมูลกับบุคลากรที่พิสูจน์แล้วก่อน</p>
+  <p class="muted">ยังไม่มีการรับอีเมลหรือส่ง OTP ในหน้านี้ จึงไม่มีค่าใช้จ่ายอีเมลหรือ SMS จากการทดสอบ</p>
+</div>
+</section>
+<section class="card" aria-labelledby="new-user">
+<h2 id="new-user">ผู้ใช้ใหม่ต้องลงทะเบียนอย่างไร?</h2>
+<ol class="steps">
+<li>เลือก Google, LINE หรือ Email OTP หลังระบบยืนยันตัวตนของช่องทางนั้นเปิดใช้จริง</li>
+<li>ระบบตรวจตัวตนกับผู้ให้บริการและตรวจหลักฐานผูกบัญชีที่ได้รับอนุมัติกับทะเบียนบุคลากรกลาง</li>
+<li>เมื่อข้อมูลตรงกันอย่างน่าเชื่อถือและบุคลากรยังมีสิทธิ์ ระบบจึงลงทะเบียนและให้สิทธิ์พื้นฐานโดยอัตโนมัติ</li>
+<li>หากยังพิสูจน์ไม่ได้ จะเข้าสู่กระบวนการยืนยันเพิ่มเติมโดยไม่ให้สิทธิ์ออกเลขหนังสือ</li>
+</ol>
+<p class="muted">ไม่สร้างทะเบียนบุคลากรซ้ำ ไม่ให้ผู้ใช้เลือกชื่อผู้อื่นแล้วรับสิทธิ์ และสิทธิ์ Admin ต้องได้รับมอบหมายตามอำนาจจริง</p>
+</section>
+<section class="card">
+<h2>ต้องใช้ระบบออกเลขหนังสือตอนนี้?</h2>
+<p>ระบบทะเบียนเดิม v0.5.10 ยังคงเปิดใช้งานด้วยวิธีเข้าสู่ระบบเดิม ระหว่างพัฒนาระบบลงทะเบียนใหม่</p>
+<a class="action" href="./">เปิดระบบทะเบียนปัจจุบัน</a>
+</section>
+</main>
+<footer>T3 Smart Identity V3 • Public Preview • ไม่เก็บ Google Token, อีเมล, หมายเลขโทรศัพท์ หรือข้อมูลบุคลากรในหน้านี้</footer>
+</div>
+<script>
+(function(){
+'use strict';
+const CLIENT_ID='141537624519-c60cq5nsih8gjqjamoa7j4titurvs9lh.apps.googleusercontent.com';
+const tabs=Array.from(document.querySelectorAll('[data-tab]'));
+const ack=document.getElementById('ack');
+const target=document.getElementById('google-button');
+const status=document.getElementById('google-status');
+let initialized=false,loading=false;
+function setStatus(text,tone){status.textContent=text;status.dataset.tone=tone||'neutral'}
+function switchTab(name){
+  tabs.forEach(t=>{let selected=t.dataset.tab===name;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1});
+  ['google','line','email'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+}
+tabs.forEach((button,i)=>{
+  button.addEventListener('click',()=>switchTab(button.dataset.tab));
+  button.addEventListener('keydown',event=>{
+   if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();let next=tabs[(i+tabs.length+(event.key==='ArrowRight'?1:-1))%tabs.length];next.click();next.focus()}
+  });
+});
+function initGoogle(){
+  if(!ack.checked){target.replaceChildren();initialized=false;setStatus('กรุณายืนยันรับทราบก่อนทดสอบ Google','neutral');return}
+  if(initialized||loading)return;
+  loading=true;
+  let tries=0;
+  function attempt(){
+    if(!ack.checked){loading=false;return}
+    if(!(window.google&&window.google.accounts&&window.google.accounts.id)){
+      if(++tries<30){setTimeout(attempt,250);return}
+      loading=false;setStatus('ไม่สามารถโหลด Google Identity Services กรุณาตรวจเครือข่ายแล้วโหลดหน้านี้ใหม่','error');return;
+    }
+    try{
+      google.accounts.id.initialize({
+        client_id:CLIENT_ID,auto_select:false,cancel_on_tap_outside:true,
+        callback:function(result){
+          const received=Boolean(result&&typeof result.credential==='string'&&result.credential.length>100);
+          result=null;
+          if(received)setStatus('ผ่าน: เบราว์เซอร์ได้รับ Credential จาก Google แล้ว\nยังไม่ใช่การลงทะเบียนสำเร็จหรือได้รับสิทธิ์เข้าทะเบียน\nไม่มีการส่งหรือบันทึก ID Token ไปยังระบบของโรงเรียน','success');
+          else setStatus('ไม่ได้รับ Credential จาก Google กรุณาลองอีกครั้ง','error');
+        }
+      });
+      target.replaceChildren();
+      google.accounts.id.renderButton(target,{theme:'outline',size:'large',text:'signin_with',shape:'rectangular',width:290});
+      initialized=true;loading=false;setStatus('Google พร้อมทดสอบในเบราว์เซอร์ (ยังไม่ได้ยืนยันสิทธิ์บุคลากร)','neutral');
+    }catch(err){loading=false;setStatus('ยังเตรียม Google Sign-In ไม่สำเร็จ กรุณาตรวจ OAuth หรือโหลดหน้าใหม่','error')}
+  }
+  attempt();
+}
+ack.addEventListener('change',initGoogle);
+switchTab('google');
+})();
+</script>
+</body></html>
