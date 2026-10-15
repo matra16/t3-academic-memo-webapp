@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ทะเบียนเลขบันทึกข้อความ • กลุ่มงานบริหารงานวิชาการ</title>
+  <!-- STD-004: pinned Sarabun. Secure no-network fallback via font stack below. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.min.css">
+  <style>
+    :root {
+      --sage: #7d9b76;        /* gentle sage */
+      --sage-dark: #5d7a58;
+      --sage-soft: #eaf1e8;
+      --teal: #2f7d78;
+      --teal-dark: #22615d;
+      --teal-soft: #e3f1f0;
+      --ink: #22302b;
+      --muted: #6b7d76;
+      --line: #d5e0d3;
+      --white: #ffffff;
+      --danger: #a5443c;
+      --danger-soft: #f7e9e8;
+      --warn: #8a6a1f;
+      --warn-soft: #fbf3e0;
+      --radius: 14px;
+      --shadow: 0 2px 10px rgba(45, 70, 60, .08);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(160deg, var(--sage-soft) 0%, var(--teal-soft) 100%);
+      background-attachment: fixed;
+      color: var(--ink);
+      min-height: 100vh;
+      padding-bottom: 40px;
+      line-height: 1.6;
+    }
+    /* Mobile-first: 320px / 390px single column. Desktop widens to 1120px below. */
+    .wrap { max-width: 640px; margin: 0 auto; padding: 14px 14px 0; }
+
+    header.app {
+      background: linear-gradient(135deg, var(--sage) 0%, var(--teal) 100%);
+      color: var(--white); border-radius: var(--radius);
+      padding: 18px 16px; box-shadow: var(--shadow); margin-bottom: 14px;
+    }
+    header.app h1 { margin: 0; font-size: 1.18rem; font-weight: 700; display: flex;
+      align-items: center; gap: 8px; }
+    header.app .sub { font-size: .8rem; opacity: .92; margin-top: 4px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.34);
+      border-radius: 999px; padding: 3px 10px; font-size: .74rem; }
+    .chip.blocked { background: var(--warn-soft); color: var(--warn); border-color: #e6d7a8; }
+
+    .card {
+      background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 16px; margin-bottom: 14px; border: 1px solid var(--line);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1rem; color: var(--teal-dark);
+      display: flex; align-items: center; gap: 8px; }
+    .card h2 .ico { font-size: 1.1rem; }
+
+    label { display: block; font-size: .84rem; font-weight: 600; margin: 12px 0 5px; }
+    label:first-of-type { margin-top: 0; }
+    .hint { font-size: .74rem; color: var(--muted); font-weight: 400; margin-top: 3px; }
+
+    input, select, textarea {
+      width: 100%; padding: 11px 12px; font-size: 16px; font-family: inherit;
+      border: 1.5px solid var(--line); border-radius: 10px; background: #fbfdfb;
+      color: var(--ink); outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,125,120,.14); }
+    textarea { min-height: 78px; resize: vertical; }
+    select { appearance: none; background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path fill='%236b7d76' d='M0 0h12L6 8z'/></svg>");
+      background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px; }
+
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+
+    button {
+      font-family: inherit; font-size: .95rem; font-weight: 600; border: none;
+      border-radius: 10px; padding: 12px 16px; cursor: pointer; width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform .06s, filter .15s;
+    }
+    button:active { transform: scale(.985); }
+    .btn-primary { background: var(--teal); color: var(--white); }
+    .btn-primary:hover { filter: brightness(1.07); }
+    .btn-ghost { background: var(--sage-soft); color: var(--sage-dark); }
+    .btn-ghost:hover { filter: brightness(.97); }
+    .btn-danger { background: var(--danger-soft); color: var(--danger); }
+    .btn-copy { background: var(--sage); color: var(--white); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .status { border-radius: 10px; padding: 11px 13px; font-size: .85rem; margin-top: 12px;
+      display: none; white-space: pre-wrap; word-break: break-word; }
+    .status.show { display: block; }
+    .status.err { background: var(--danger-soft); color: var(--danger); }
+    .status.ok { background: var(--teal-soft); color: var(--teal-dark); }
+    .status.warn { background: var(--warn-soft); color: var(--warn); }
+
+    .result-box { background: var(--teal-soft); border: 1.5px dashed var(--teal);
+      border-radius: 12px; padding: 14px; margin-top: 12px; text-align: center; }
+    .result-box .docno { font-size: 1.22rem; font-weight: 700; color: var(--teal-dark);
+      word-break: break-all; }
+    .result-box .meta { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+    .token-box { background: var(--warn-soft); border: 1.5px solid #e6d7a8; border-radius: 12px;
+      padding: 13px; margin-top: 12px; }
+    .token-box strong { color: var(--warn); display: block; margin-bottom: 5px; font-size: .86rem; }
+    .token-box code { display: block; background: #fff; border: 1px solid #e6d7a8;
+      border-radius: 8px; padding: 9px; margin: 7px 0; word-break: break-all;
+      font-size: .88rem; user-select: all; }
+
+    .hist-item { border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px;
+      margin-bottom: 9px; background: #fcfefc; }
+    .hist-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .hist-doc { font-weight: 700; color: var(--teal-dark); font-size: .95rem; word-break: break-all; }
+    .hist-sub { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+    .badge { font-size: .7rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+      font-weight: 700; }
+    .badge.ISSUED { background: var(--teal-soft); color: var(--teal-dark); }
+    .badge.QUEUED_NO_SERIAL { background: var(--warn-soft); color: var(--warn); }
+    .badge.CANCEL_REQUESTED { background: var(--danger-soft); color: var(--danger); }
+    .badge.CANCELLED { background: #ececec; color: #666; }
+    .badge.ACTIVE { background: var(--sage-soft); color: var(--sage-dark); }
+    .hist-actions { display: flex; gap: 7px; margin-top: 9px; }
+    .hist-actions button { padding: 8px 10px; font-size: .8rem; width: auto; flex: 1; }
+
+    .latest { display: flex; align-items: baseline; gap: 8px; justify-content: center;
+      padding: 6px 0; }
+    .latest .num { font-size: 1.5rem; font-weight: 700; color: var(--sage-dark); }
+
+    footer.brand { text-align: center; font-size: .84rem; color: var(--muted);
+      padding: 16px 10px 8px; line-height: 1.7; }
+    .hidden { display: none !important; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%; animation: sp .7s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    .lock { text-align: center; padding: 26px 18px; }
+    .lock .big { font-size: 2.2rem; }
+
+    /* Touch targets stay generous on small screens (iOS/AND minimum). */
+    button, input, select, textarea { min-height: 48px; }
+    textarea { min-height: 96px; }
+    .hist-actions button { min-height: 44px; }
+
+    /* ============================================================
+       DESKTOP USABILITY (min-width: 900px)
+       Goal: stop rendering desktop screens as a 640px phone card.
+       - shell widens 640px -> 1120px
+       - login stays a centred 480px card
+       - #appBody becomes a 2-column CSS grid:
+         status spans the full width, memo form large on the left,
+         history/search + account stacked on the right
+       Mobile (320/390) is untouched: the block below never applies.
+       ============================================================ */
+    @media (min-width: 900px) {
+      .wrap { max-width: 1120px; padding: 26px 28px 0; }
+
+      /* Login card keeps its focused, centred reading width on desktop. */
+      #loginCard { max-width: 480px; margin: 32px auto 22px; padding: 26px 28px; }
+
+      header.app { padding: 24px 26px; }
+      header.app h1 { font-size: 1.34rem; }
+      header.app .sub { font-size: .88rem; }
+      .chip { font-size: .8rem; padding: 5px 13px; }
+
+      .card { padding: 22px 24px; border-radius: 16px; }
+      .card h2 { font-size: 1.08rem; margin-bottom: 14px; }
+      label { font-size: .88rem; }
+      .hint { font-size: .78rem; }
+      button { font-size: 1rem; padding: 13px 18px; }
+
+      /* ---- #appBody desktop grid ---- */
+      #appBody {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      /* Grid gap replaces stacked card margins. */
+      #appBody > .card, #appBody > .col-side { margin-bottom: 0; }
+      /* Top status card spans both columns. */
+      #appBody > .card-status { grid-column: 1 / -1; }
+      /* Memo request form occupies the large left column. */
+      #appBody > .card-main { grid-column: 1; }
+      /* History/search + account stack in the right column. */
+      #appBody > .col-side {
+        grid-column: 2;
+        display: flex; flex-direction: column; gap: 16px; min-width: 0;
+      }
+      #appBody > .col-side > .card { margin-bottom: 0; }
+      /* Wider right column needs roomier hit areas. */
+      #appBody > .col-side .hist-actions button { min-height: 46px; }
+      #latestBox .num { font-size: 1.7rem; }
+
+      footer.brand { padding: 22px 10px 10px; font-size: .88rem; }
+    }
+
+    /* HARD SAFETY: the desktop grid must never resurrect a .hidden element.
+       `.hidden` is display:none !important, and the id-qualified rule below
+       removes any chance that a grid/flex display declaration overrides it. */
+    .hidden { display: none !important; }
+    #appBody.hidden, #appBody .hidden, .hidden.card, .hidden.col-side {
+      display: none !important;
+    }
+
+    /* Adaptive accessibility: viewport fluid typography, safe touch targets. */
+    html { font-size: clamp(15px, calc(12px + .48vw), 20px); }
+    body { overflow-x: hidden; }
+    .wrap { width: 100%; }
+    .card, .col-side, .card-main, #appBody { min-width: 0; }
+    header.app h1 { font-size: clamp(1.14rem, 1.06rem + .65vw, 1.55rem); overflow-wrap: anywhere; }
+    .card h2 { font-size: clamp(1rem, .95rem + .35vw, 1.18rem); }
+    label, .hint, .status { line-height: 1.65; }
+    .hint { font-size: max(.83rem, 13px); }
+    .cross-filters {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 9px; margin-top:12px;}
+    .cross-filters label {font-size:.81rem; margin-top:5px;}
+    .cross-filters select {min-width:0; font-size:clamp(14px,.88rem,18px);}
+    @media(max-width:430px){.cross-filters {grid-template-columns:1fr;}}
+    #personnelSearch {background-color:#fbfdfb;}
+    #personnelStatus {min-height:23px;}
+    .smart-panel { border: 1px solid var(--line); border-radius: 12px; background: #f5faf8; padding: 12px; margin-top: 10px; }
+    .smart-panel .assistant-note { font-size: .83rem; color: var(--muted); }
+    .smart-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .smart-actions button { width:auto; flex: 1 1 125px; min-height:44px; background:#dceee9; color:var(--teal-dark); }
+    @media (max-width: 479px) {
+      .wrap {padding:8px 8px 0}
+      .card {padding:14px; border-radius:12px}
+      header.app {padding:16px 14px}
+      .row {flex-wrap:wrap}
+      .row > * {flex: 1 1 130px}
+    }
+    @media (min-width: 1400px) {
+      .wrap { max-width: 1340px; }
+      #appBody { grid-template-columns: minmax(0,1.7fr) minmax(360px,1fr); }
+    }
+    @media (pointer: coarse) { button, input, select { min-height: 48px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+  #appBody{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(260px,.9fr);align-items:start;gap:15px}
+  #appBody.hidden{display:none}
+  #appBody>.card-status,#appBody>.register-panel{grid-column:1/-1}
+  #appBody>.card-main{grid-column:1}
+  #appBody>.col-side{grid-column:2}
+  .register-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .register-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .register-actions button{width:auto;min-width:120px;min-height:44px}
+  .table-scroll{max-width:100%;overflow-x:auto}
+  .register-table{width:100%;min-width:700px;border-collapse:collapse;text-align:left;font-size:.88rem}
+  .register-table td,.register-table th{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .register-table th{background:var(--sage-soft)}
+  .register-table td:first-child{white-space:nowrap;font-weight:700}
+  .register-table .row-tools{display:flex;gap:5px}
+  .register-table .row-tools button{width:auto;padding:7px 10px;min-height:39px}
+  .memo-dialog{box-sizing:border-box;position:fixed;width:min(780px,calc(100vw - 22px));
+    max-height:88vh;overflow:auto;max-width:none;padding:0;border:1px solid var(--line);
+    border-radius:15px;background:white;color:var(--text);box-shadow:0 18px 75px #0003}
+  .memo-dialog::backdrop{background:rgba(0,0,0,.52)}
+  .modal-top{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+  .modal-top h2{margin:0}.modal-top button{width:auto;min-width:90px}
+  .modal-body{padding:20px}
+  .token-box{display:none!important}
+  @media(max-width:760px){#appBody{grid-template-columns:minmax(0,1fr)}
+    #appBody>.card-main,#appBody>.col-side{grid-column:1}
+    .register-actions{width:100%}.register-actions button{flex:1}}
+
+  footer.compact-footer{font-size:.66rem!important;opacity:.6;padding:7px!important}
+  /* v0.5.1 User-first: one action visible with no vertical hunting. */
+  body {padding-bottom:12px;background:#edf4f0;}
+  .wrap {max-width:1180px!important;padding:9px 14px 0;}
+  header.app {padding:10px 18px!important;margin-bottom:10px!important;border-radius:10px;
+    background:#307d76;}
+  header.app h1{font-size:clamp(1.05rem,1.05rem + .24vw,1.29rem);line-height:1.35;}
+  header.app .sub{font-size:.78rem;margin-top:1px;opacity:.96;}
+  .series-line{display:flex;align-items:center;gap:12px;margin-top:5px;flex-wrap:wrap}
+  .series-line span{font-size:.83rem;opacity:.95}
+  .series-line strong{font-size:clamp(1.32rem,1.12rem + 1vw,2rem);line-height:1.2;letter-spacing:.4px}
+  #chips,#loginPerf,#dateTodayHint {display:none!important}
+  #appBody {display:flex!important;flex-direction:column;gap:10px;align-items:stretch;}
+  #appBody.hidden {display:none!important;}
+  #appBody>.card-status{display:none!important;}
+  #appBody>.card-main{order:1;padding:14px 17px;margin:0!important;}
+  #appBody>.register-panel{order:2;padding:12px 17px;margin:0!important;}
+  #appBody>.col-side{order:3;display:flex;justify-content:flex-end;margin:0!important}
+  #appBody>.col-side>.card{padding:8px 13px;margin:0;width:100%;display:flex;align-items:center;gap:15px}
+  #appBody>.col-side h2{font-size:.86rem;margin:0;white-space:nowrap}
+  #appBody>.col-side #accountInfo{font-size:.76rem;flex:1}
+  #logoutBtn{min-width:115px;width:auto!important;min-height:38px;padding:6px 10px}
+  .card-main h2{margin-bottom:5px;font-size:1.1rem}
+  .card-main label{margin:8px 0 3px;font-size:.85rem}
+  .card-main input,.card-main select,.card-main textarea{padding:8px 11px;min-height:42px}
+  .card-main textarea#subject{min-height:68px;height:68px;resize:vertical}
+  .card-main .hint{font-size:.74rem!important;line-height:1.3}
+  #personnelStatus{min-height:0;margin:1px 0 0}
+  #reloadRosterBtn{width:auto!important;min-height:27px!important;padding:1px 7px!important;
+    border:0;background:transparent;text-align:left;justify-content:flex-start;font-size:.74rem;
+    font-weight:500;margin:0!important;}
+  .issue-fields{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;}
+  .issue-fields .field{min-width:0}
+  .issue-action{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  #submitBtn{width:min(380px,100%);min-height:50px;background:#207a66!important;
+    color:#fff;font-size:1.09rem;font-weight:700}
+  .issue-reason{font-size:.85rem;color:#85601c;flex:1;min-width:230px;line-height:1.3}
+  .optional-fields{margin-top:7px;max-width:560px;color:#526d64;font-size:.82rem;}
+  .optional-fields summary{cursor:pointer;text-decoration:underline}
+  .optional-fields textarea{min-height:55px;max-height:80px}
+  .register-toolbar{margin-bottom:3px}
+  .register-toolbar h2{margin:0;font-size:1.02rem}
+  .register-actions button{font-size:.84rem;min-height:37px;padding:6px 11px}
+  #registerStatus{margin:0 0 5px!important;font-size:.76rem}
+  .register-table{min-width:770px;}
+  .register-table th,.register-table td{padding:7px 9px}
+  .register-table td:nth-child(1){font-size:1.16rem;color:#176e64;font-weight:800;text-align:center}
+  .register-table th:nth-child(1){text-align:center}
+  .register-table td:nth-child(2){font-weight:600;white-space:nowrap}
+  .register-table td:nth-child(3){white-space:nowrap}
+  .register-panel .table-scroll{max-height:390px;overflow:auto}
+  .admin-dialog{background:#17252b!important;color:#e8f1f5!important;border-color:#445765;}
+  .admin-dialog h2,.admin-dialog label,.admin-dialog .hint{color:#e8f1f5!important}
+  .admin-dialog .modal-top{background:#101b22;border-color:#445765}
+  .admin-dialog .modal-top button{background:#3a5361;color:#f3f8fa}
+  .admin-dialog input,.admin-dialog textarea{background:#243b45;color:#f8fbff;border:1px solid #667e8b}
+  .admin-dialog input:focus,.admin-dialog textarea:focus{border-color:#77d6ca}
+  .admin-dialog .btn-primary{background:#2da999;color:#071917}
+  body.admin-active{background:#172126;color:#eff5f7}
+  body.admin-active header.app{background:#182c36}
+  body.admin-active .card{background:#243640;border-color:#49636c;color:#eff5f7}
+  body.admin-active .card h2,body.admin-active .hint,body.admin-active label{color:#dfecee}
+  body.admin-active input,body.admin-active select,body.admin-active textarea{background:#2b4651;
+    color:#fff;border-color:#577582}
+  body.admin-active .register-table th{background:#304956;color:#fff}
+  body.admin-active .register-table td{border-color:#4d6571}
+  body.admin-active .register-table td:nth-child(1){color:#6ce2ce}
+  body.admin-active .issue-reason{color:#f1d492}
+  @media(max-width:760px){
+    .wrap{padding:6px 8px 0}
+    header.app{padding:10px 12px!important}
+    #appBody>.card-main,#appBody>.register-panel{padding:12px}
+    .issue-fields{grid-template-columns:1fr 1fr;gap:7px}
+    .issue-action{display:block}
+    #submitBtn{width:100%}
+    .issue-reason{margin-top:6px}
+    .register-actions{width:auto}
+    .register-actions button{min-width:0;padding:6px 9px}
+    #appBody>.col-side>.card{display:block}
+    #logoutBtn{width:100%!important;margin-top:6px}
+  }
+  @media(max-width:420px){.issue-fields{grid-template-columns:1fr}
+    .register-toolbar h2{width:100%}}
+
+  header.app{position:relative;padding-right:260px!important;}
+  .top-actions{position:absolute;top:12px;right:13px;display:flex;gap:8px;align-items:center;}
+  .top-actions button{width:auto;min-height:42px;padding:8px 12px;font-size:.83rem;border-radius:8px}
+  .top-admin{background:#e4f3eb;color:#205c50;}
+  .top-logout{background:#fff;color:#8c3835;}
+  .top-actions button:focus-visible{outline:3px solid #f8de71;outline-offset:2px}
+  .name-lookup{position:relative;min-width:0;}
+  .name-results{position:absolute;top:calc(100% + 3px);left:0;right:0;max-height:260px;
+    overflow-y:auto;z-index:120;background:#fff;border:1px solid #82aaa0;
+    border-radius:10px;box-shadow:0 10px 30px rgba(13,48,45,.2);padding:4px;}
+  .name-choice{width:100%;display:block;text-align:left;color:#203b35;background:#fff;
+    border:0;border-radius:6px;padding:9px 12px;min-height:41px;font-size:.95rem;
+    line-height:1.4;word-break:break-word;cursor:pointer}
+  .name-choice:hover,.name-choice[aria-selected="true"],.name-choice:focus-visible{
+    color:#102e28;background:#d8eee8;outline:none}
+  .name-empty,.name-extra{font-size:.84rem;padding:10px;color:#4d665e}
+  body.admin-active .top-admin{background:#4bc6b8;color:#0c2524}
+  body.admin-active .name-results{background:#223b43;border-color:#76a4ab}
+  body.admin-active .name-choice{background:#223b43;color:#f2fbff}
+  body.admin-active .name-choice[aria-selected="true"],body.admin-active .name-choice:hover{background:#3a6467}
+  @media(max-width:740px){
+    header.app{padding-right:12px!important}
+    .top-actions{position:static;margin-top:8px;justify-content:space-between;width:100%}
+    .top-actions button{flex:1}
+    .name-results{max-height:235px}
+  }
+
+  /* v0.5.6 Single-screen, viewport-aware work surface.
+     Screen is fitted to the actual window, not a fixed monitor resolution. */
+  :root{--memo-base-font:16px; --memo-block-gap:7px}
+  html{font-size:var(--memo-base-font);height:100%;overflow:hidden;}
+  html,body{width:100%;max-width:100%;overflow-x:hidden!important;}
+  body{height:100dvh;min-height:0;overflow-y:hidden!important;padding:0!important;margin:0!important}
+  body>.wrap{height:100dvh;min-height:0;max-height:100dvh;
+    display:flex;flex-direction:column;gap:var(--memo-block-gap);
+    padding:clamp(4px,.7vh,8px) clamp(7px,1.2vw,14px) 0!important;
+    overflow:hidden;box-sizing:border-box;}
+  header.app{flex:0 0 auto;margin:0!important;
+    padding:clamp(5px,.8vh,10px) clamp(10px,1.3vw,18px)!important;
+    border-radius:10px;min-height:0;}
+  header.app h1{font-size:clamp(1rem,1.1rem,1.24rem)!important;line-height:1.18;margin:0}
+  header.app .sub{font-size:.73rem;line-height:1.15;margin-top:2px}
+  .series-line{margin-top:2px;gap:8px;line-height:1.12}
+  .series-line strong{font-size:clamp(1.14rem,1.2rem + .2vw,1.58rem)}
+  #loginCard{flex:none;overflow:hidden;}
+  #appBody:not(.hidden){flex:1 1 auto;min-height:0;overflow:hidden;
+    display:flex!important;flex-direction:column;gap:var(--memo-block-gap)!important;}
+  #appBody>.card-main{padding:clamp(7px,1.2vh,12px) clamp(11px,1.2vw,16px)!important;
+    margin:0!important;flex:0 1 auto;min-height:0;}
+  #appBody>.register-panel{flex:1 1 auto;min-height:0;overflow:hidden;
+    display:flex;flex-direction:column;gap:2px;margin:0!important;
+    padding:clamp(7px,1vh,10px) clamp(11px,1.2vw,16px)!important;}
+  #appBody>.register-panel .table-scroll{min-height:0;flex:1 1 auto;overflow:hidden;
+    max-height:none!important;}
+  .register-table{min-width:0!important;font-size:.79rem!important;table-layout:fixed;}
+  .register-table td,.register-table th{padding:5px 6px!important;line-height:1.23;
+    overflow-wrap:anywhere;word-break:normal;}
+  .register-table td:nth-child(1){font-size:1rem!important}
+  .register-table th:nth-child(1){width:7%}
+  .register-table th:nth-child(2){width:23%}
+  .register-table th:nth-child(3){width:14%}
+  .register-table th:nth-child(4){width:17%}
+  .register-table th:nth-child(5){width:28%}
+  .register-table th:nth-child(6){width:11%}
+  .register-panel h2,.card-main h2{font-size:1rem!important;line-height:1.23;margin:0 0 2px!important;}
+  .card-main label{margin:5px 0 2px!important;font-size:.81rem;line-height:1.2;}
+  .card-main input,.card-main select{min-height:34px!important;height:34px;padding:5px 9px!important;}
+  .card-main textarea#subject{height:clamp(42px,6.5vh,63px)!important;
+    min-height:42px!important;padding:6px 9px!important;}
+  #personnelStatus{margin:0!important;line-height:1.15;font-size:.72rem!important}
+  #reloadRosterBtn{min-height:24px!important;height:24px!important;line-height:1;
+    padding:2px 5px!important;margin:0!important;font-size:.73rem}
+  .issue-fields{gap:8px}
+  .issue-action{margin-top:7px;gap:9px}
+  #submitBtn{min-height:42px!important;height:42px;padding:6px 12px;
+    font-size:1rem!important}
+  .issue-reason{font-size:.77rem;line-height:1.18}
+  .optional-fields{margin-top:2px}
+  .optional-fields summary{font-size:.73rem}
+  #submitMsg.status{margin:3px 0 0!important;padding:6px 9px!important;font-size:.8rem;
+    line-height:1.18;min-height:0;}
+  #resultBox:not(.hidden){display:grid;grid-template-columns:1fr auto;
+    align-items:center;gap:5px;padding:5px 9px!important;
+    margin-top:4px!important;border-radius:8px;}
+  #resultBox>.hint,#resultBox>.meta{display:none!important}
+  #resultBox .docno{grid-column:1;font-size:1.1rem!important;margin:0!important;line-height:1.25}
+  #resultBox #copyBtn{grid-column:2;grid-row:1;width:auto!important;
+    margin:0!important;padding:6px 11px!important;height:34px;min-height:34px;
+    font-size:.78rem;white-space:nowrap}
+  #tokenBox.hidden{display:none}
+  .register-toolbar{gap:5px}
+  .register-actions button{height:32px;min-height:32px;padding:4px 9px;font-size:.78rem}
+  #registerStatus{margin:0!important;font-size:.7rem!important}
+  footer.brand{flex:0 0 auto;margin:0!important;padding:1px 4px 2px!important;
+    line-height:1.1;font-size:.63rem!important;max-height:30px;overflow:hidden}
+  footer.brand>*{margin:0!important}
+  .name-results,.memo-dialog .modal-body,.hist-items{
+    scrollbar-width:none;-ms-overflow-style:none;}
+  .name-results::-webkit-scrollbar,.memo-dialog .modal-body::-webkit-scrollbar,
+  .hist-items::-webkit-scrollbar{display:none}
+  .name-results{max-height:min(260px,45dvh)}
+  .top-actions button{min-height:34px;height:34px;padding:4px 11px}
+  /* Under low heights, fit content by density before reducing text below readable sizes. */
+  @media(max-height:800px){
+    :root{--memo-block-gap:4px}
+    header.app{padding-top:4px!important;padding-bottom:4px!important}
+    .card-main label{margin-top:3px!important}
+    #appBody>.card-main,#appBody>.register-panel{padding-top:6px!important;padding-bottom:6px!important}
+    .series-line strong{font-size:1.18rem}
+    #submitBtn{height:38px;min-height:38px!important}
+    .card-main textarea#subject{height:42px!important}
+    footer.brand{max-height:16px}
+  }
+  @media(max-width:640px){
+    .register-table{font-size:.73rem!important}
+    .register-table th:nth-child(6),.register-table td:nth-child(6){display:none}
+    .register-table th:nth-child(1){width:10%}
+    .register-table th:nth-child(2){width:28%}
+    .register-table th:nth-child(3){width:19%}
+    .register-table th:nth-child(4){width:20%}
+    .register-table th:nth-child(5){width:23%}
+    #resultBox .docno{font-size:1rem!important}
+    #resultBox #copyBtn{font-size:.7rem;padding:4px 6px!important}
+  }
+  @media(max-width:420px){
+    .issue-fields{grid-template-columns:1fr 1fr!important}
+    .register-table th:nth-child(4),.register-table td:nth-child(4){display:none}
+    .register-table th:nth-child(1){width:12%}
+    .register-table th:nth-child(2){width:36%}
+    .register-table th:nth-child(3){width:25%}
+    .register-table th:nth-child(5){width:27%}
+    .issue-reason{font-size:.72rem}
+    .top-actions{gap:5px}
+    .top-actions button{font-size:.75rem;padding:4px 6px}
+  }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <h1><span aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span> ทะเบียนเลขบันทึกข้อความ</h1>
+    <div class="sub">กลุ่มงานบริหารงานวิชาการ • โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</div>
+    <div class="series-line"><span>ชุดเลขหนังสือ</span><strong id="seriesPrefix">พล.52006.03.1/</strong></div>
+    <nav id="topActions" class="top-actions hidden" aria-label="การจัดการระบบ">
+      <button id="adminOpen" type="button" class="top-admin">⚙ ผู้ดูแลระบบ</button>
+      <button id="logoutBtn" type="button" class="top-logout">ออกจากระบบ</button>
+    </nav>
+    <div id="accountInfo" class="hidden" aria-hidden="true"></div>
+    <div class="chips hidden" id="chips" aria-live="polite"></div>
+    <div id="loginPerf" class="assistant-note hidden" aria-live="polite"></div>
+  </header>
+
+  <!-- ============ GATE 1: STAFF CODE ============ -->
+  <section class="card" id="loginCard">
+    <div class="lock">
+      <div class="big" aria-hidden="true"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none"/></svg></div>
+      <h2 style="justify-content:center;margin-top:6px">ผู้บริหารและครู โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</h2>
+      <p class="hint" style="max-width:380px;margin:6px auto 0">
+        กรุณากรอกรหัสที่โรงเรียนกำหนด เพื่อใช้งานทะเบียนบันทึกข้อความภายใน
+        และตรวจสอบชื่อผู้ขอหนังสือให้ถูกต้องก่อนส่ง
+      </p>
+    </div>
+    <form id="loginForm" autocomplete="off" novalidate>
+      <label for="staffCode">รหัสเข้าใช้งาน</label>
+      <input type="password" id="staffCode" name="academic-memo-staff-access"
+             autocomplete="new-password" value="" autofocus
+             inputmode="text" enterkeyhint="go" autocapitalize="off"
+             spellcheck="false" aria-describedby="staffCodeHint">
+      <div class="hint" id="staffCodeHint">กด Enter หรือคลิกเข้าสู่ระบบ</div>
+      <button type="submit" class="btn-primary" id="loginBtn" style="margin-top:14px">🔓 เข้าสู่ระบบ</button>
+      <div class="status" id="loginMsg" role="alert" aria-live="assertive"></div>
+    </form>
+  </section>
+
+  <!-- ============ MAIN ============ -->
+  <section id="appBody" class="hidden">
+
+    <div class="card card-status hidden">
+      <h2><span class="ico" aria-hidden="true">📊</span> สถานะระบบเลขหมาย</h2>
+      <div class="latest" id="latestBox"></div>
+      <div class="hint" id="gateHint" style="text-align:center"></div>
+    </div>
+
+    <div class="card card-main">
+      <h2><span class="ico" aria-hidden="true">✍️</span> ออกเลขบันทึกข้อความ</h2>
+
+      <label for="personnelSearch">ชื่อผู้ขอหนังสือ</label>
+      <div class="name-lookup" id="personnelLookup">
+        <input type="search" id="personnelSearch"
+          placeholder="พิมพ์ชื่อหรือนามสกุลเพื่อค้นหา" autocomplete="off"
+          role="combobox" aria-autocomplete="list" aria-expanded="false"
+          aria-controls="personnelChoices" aria-describedby="personnelStatus">
+        <div id="personnelChoices" class="name-results hidden" role="listbox"
+          aria-label="รายชื่อผู้บริหารและครู"></div>
+      </div>
+      <select id="personnel" class="hidden" aria-hidden="true" tabindex="-1"><option value=""></option></select>
+      <div class="hint" id="personnelStatus" aria-live="polite">กำลังโหลดรายชื่อผู้บริหารและครูจากฐานกลาง</div>
+      <button id="reloadRosterBtn" type="button" class="btn-ghost" style="margin-top:8px;min-height:44px">↻ อัปเดตรายชื่อ</button>
+
+      <label for="subject">หัวข้อ / เรื่อง</label>
+      <textarea id="subject" maxlength="180" placeholder="ระบุรายละเอียดหนังสือที่ต้องการ"></textarea>
+
+      <div class="issue-fields">
+        <div class="field">
+          <label for="category">ประเภทหนังสือ</label>
+          <select id="category"></select>
+        </div>
+        <div class="field">
+          <label for="reqDate">วันที่ออกเลข</label>
+          <input type="text" id="reqDate" readonly placeholder="เลือกวันที่" autocomplete="off">
+          <input type="hidden" id="reqDateISO">
+          <div class="hint hidden" id="dateTodayHint"></div>
+        </div>
+      </div>
+
+
+
+      <div class="issue-action">
+        <button class="btn-primary" id="submitBtn" type="button">
+          ออกเลขและบันทึกทะเบียน
+        </button>
+        <div id="issueReason" class="issue-reason" role="status" aria-live="polite"></div>
+      </div>
+            <details class="optional-fields">
+        <summary>เพิ่มหมายเหตุ (ถ้ามี)</summary>
+        <label for="notes">หมายเหตุ</label>
+        <textarea id="notes" maxlength="400" placeholder="ข้อมูลเพิ่มเติม"></textarea>
+      </details>
+      <div class="status" id="submitMsg" role="status" aria-live="polite"></div>
+
+      <div class="result-box hidden" id="resultBox">
+        <div class="hint">เลขหมายหนังสือ</div>
+        <div class="docno" id="resultDocNo"></div>
+        <div class="meta" id="resultMeta"></div>
+        <button class="btn-copy" id="copyBtn" style="margin-top:11px">
+          📋 คัดลอก “ที่ เลขหมาย”
+        </button>
+      </div>
+
+      <div class="token-box hidden" id="tokenBox">
+        <strong>⚠️ รหัสยืนยันการยกเลิก (แสดงครั้งเดียว)</strong>
+        <div class="hint">กรุณาคัดลอกเก็บไว้ทันที ระบบไม่สามารถแสดงซ้ำได้</div>
+        <code id="tokenValue"></code>
+        <button class="btn-ghost" id="copyTokenBtn">📋 คัดลอกรหัสนี้</button>
+      </div>
+    </div>
+
+    <div class="card register-panel">
+      <div class="register-toolbar">
+        <h2>📒 ทะเบียนเลขบันทึกข้อความ</h2>
+        <div class="register-actions">
+          <button id="historyOpen" class="btn-ghost" type="button">🔍 ค้นหาประวัติ</button>
+          
+        </div>
+      </div>
+      <div id="registerStatus" class="hint" aria-live="polite">กำลังโหลดทะเบียน</div>
+      <div class="table-scroll">
+        <table class="register-table">
+          <thead><tr><th>ลำดับ</th><th>เลขที่หนังสือเต็ม</th><th>วันที่</th><th>ผู้ขอ</th><th>เรื่อง</th><th>ประเภท</th><th class="admin-only hidden">จัดการ</th></tr></thead>
+          <tbody id="registerRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+
+  </section>
+  <dialog id="historyDialog" class="memo-dialog" aria-label="ค้นหาประวัติทะเบียน">
+    <div class="modal-top"><h2>ค้นหาประวัติทะเบียน</h2><button id="historyClose" type="button" class="btn-ghost">ปิด</button></div>
+    <div class="card">
+      <h2><span class="ico" aria-hidden="true">🔍</span> ค้นหาประวัติ</h2>
+      <div class="row">
+        <input type="search" id="q" placeholder="เลขหมาย / หัวข้อ / ชื่อผู้ขอ" aria-label="ค้นหา">
+        <button class="btn-ghost" id="searchBtn" style="width:auto;padding:11px 14px">ค้นหา</button>
+      </div>
+      <div class="cross-filters" aria-label="กรองประวัติหลายเงื่อนไข">
+        <label for="filterYear">ปี พ.ศ.</label>
+        <select id="filterYear"><option value="">ทุกปี</option></select>
+        <label for="filterMonth">เดือน</label>
+        <select id="filterMonth">
+          <option value="">ทุกเดือน</option>
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <label for="filterStatus">สถานะ</label>
+        <select id="filterStatus">
+          <option value="">ทุกสถานะ</option>
+          <option value="ISSUED">ออกเลขแล้ว</option>
+          <option value="CANCEL_REQUESTED">รอยืนยันยกเลิก</option>
+          <option value="CANCELLED">ยกเลิกแล้ว</option>
+        </select>
+        <label for="filterCategory">ประเภทหนังสือ</label>
+        <select id="filterCategory"><option value="">ทุกประเภท</option></select>
+        <label for="filterRequester">ผู้ขอหนังสือ</label>
+        <select id="filterRequester"><option value="">ทุกคน</option></select>
+      </div>
+      <button type="button" class="btn-ghost" id="resetFilters" style="margin-top:10px">ล้างตัวกรอง</button>
+      <label class="row" style="align-items:center;gap:7px;margin-top:11px;font-weight:400">
+        <input type="checkbox" id="showCancelled" style="width:auto;flex:none">
+        <span>แสดงรายการที่ยกเลิกแล้ว</span>
+      </label>
+      <div class="status" id="histMsg" role="status"></div>
+      <div id="history" style="margin-top:12px"></div>
+    </div>
+
+  </dialog>
+  <dialog id="adminDialog" class="memo-dialog admin-dialog" aria-label="ผู้ดูแลระบบ">
+    <div class="modal-top"><h2>ผู้ดูแลทะเบียน</h2><button id="adminClose" type="button" class="btn-ghost">ปิด</button></div>
+    <div class="modal-body">
+      <label for="adminPass">รหัสผู้ดูแล</label><input type="password" id="adminPass" autocomplete="off">
+      <button type="button" id="adminUnlock" class="btn-primary">ยืนยันสิทธิ์ผู้ดูแล</button>
+      <button type="button" id="adminLock" class="btn-ghost hidden">ออกจากสิทธิ์ผู้ดูแล</button>
+      <div class="hint" id="adminMsg">ผู้ใช้งานทั่วไปไม่สามารถแก้ไขหรือลบเลขที่ออกแล้วได้</div>
+    </div>
+  </dialog>
+  <dialog id="editDialog" class="memo-dialog admin-dialog" aria-label="แก้ไขทะเบียน">
+    <div class="modal-top"><h2>แก้ไขข้อมูลทะเบียน</h2><button id="editClose" type="button" class="btn-ghost">ปิด</button></div>
+    <div class="modal-body">
+      <div id="editDoc" class="hint"></div>
+      <label for="editSubject">เรื่อง</label><textarea maxlength="180" id="editSubject"></textarea>
+      <label for="editCategory">ประเภท</label><input maxlength="80" id="editCategory">
+      <label for="editNotes">หมายเหตุ</label><textarea maxlength="400" id="editNotes"></textarea>
+      <button type="button" id="editSave" class="btn-primary">ยืนยันการแก้ไข</button>
+      <div id="editMsg" class="status"></div>
+    </div>
+  </dialog>
+
+  <footer class="brand compact-footer">
+    © กลุ่มงานบริหารงานวิชาการ โรงเรียนเทศบาล ๓ (วัดท่ามะปราง) พัฒนาโดย Mr.Matra Yodchan<br>
+    <span style="opacity:.8">ทะเบียนเลขบันทึกข้อความ</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.min.js"></script>
+<script>
+'use strict';
+/* ================= helpers ================= */
+var $ = function (id) { return document.getElementById(id); };
+
+/* Always use textContent — never innerHTML with user data (XSS defense). */
+function toThaiDigits(value) {
+  return String(value===null||value===undefined?'':value).replace(/[0-9]/g,function(n){
+    return '๐๑๒๓๔๕๖๗๘๙'.charAt(Number(n));
+  });
+}
+function toAsciiDigits(value) {
+  return String(value===null||value===undefined?'':value).replace(/[๐-๙]/g,function(n){
+    return String('๐๑๒๓๔๕๖๗๘๙'.indexOf(n));
+  });
+}
+function setText(el, value) { el.textContent=toThaiDigits(value); }
+
+function showMsg(el, msg, kind) {
+  el.className = 'status show ' + (kind || 'ok');
+  setText(el, msg);
+}
+function hideMsg(el) { el.className = 'status'; setText(el, ''); }
+
+function busy(btn, on, label) {
+  btn.disabled = on;
+  if (on) {
+    /* Capture the real label BEFORE clearing it. setText() returns undefined, so
+       the old `|| setText(btn,'')` wrote the literal string "undefined" into
+       dataset.label and permanently corrupted the button (audit D1). */
+    if (btn.dataset.label === undefined) { btn.dataset.label = btn.textContent || ''; }
+    btn.textContent = '';
+    var sp = document.createElement('span'); sp.className = 'spinner';
+    var t = document.createElement('span'); setText(t, label || 'กำลังตรวจสอบ…');
+    btn.appendChild(sp); btn.appendChild(t);
+  } else if (btn.dataset.label !== undefined) {
+    setText(btn, btn.dataset.label);
+  }
+}
+
+/* Explicit client bootstrap timeout (work order D). */
+var CLIENT_TIMEOUT_MS = 20000;
+
+/* Wrap the GAS entry point so every failure surfaces a real message.
+   Never rejects: a missing/disabled bridge or a synchronous throw resolves a
+   structured {ok:false,error:{code,message}} envelope instead (audit D2). */
+/* Public full-screen hosting on GitHub Pages (no Apps Script toolbar).
+   All school data stays on the owner-controlled GAS canonical service.
+   HTTPS POST uses text/plain to avoid browser preflight to GAS ContentService.
+   No secrets are embedded in site source; staff code stays runtime-only. */
+const GAS_RPC_ENDPOINT = 'https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSkbhCFZ_uJs4dil1jvANgb4bGoeYYpToRUcQ8UBj96HE_UuraVbC9tJLSte/exec';
+const CLIENT_RPC_ALLOWLIST = Object.freeze({
+  fastAuth:true,getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
+  cancelMemoRequest:true,adminAuthenticate:true,adminUpdateIssued:true,
+  adminVoidIssued:true
+});
+async function call(fnName,args){
+  if(!CLIENT_RPC_ALLOWLIST[fnName]){
+    return {ok:false,error:{code:'RPC_NOT_ALLOWED',message:'ไม่อนุญาตคำสั่งนี้'}};
+  }
+  let timeoutController=new AbortController();
+  let timeoutId=setTimeout(()=>timeoutController.abort(),30000);
+  try{
+    let req={fn:fnName,args:args||[]};
+    let response=await fetch(GAS_RPC_ENDPOINT,{
+      method:'POST',mode:'cors',redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      cache:'no-store',credentials:'omit',body:JSON.stringify(req),
+      signal:timeoutController.signal
+    });
+    if(!response.ok)throw Error('HTTP '+response.status);
+    let result=await response.json();
+    if(!result||typeof result.ok!=='boolean')throw Error('INVALID_RPC_RESPONSE');
+    return result;
+  }catch(error){
+    return {ok:false,error:{
+      code:error?.name==='AbortError'?'TIMEOUT':'CONNECT_ERROR',
+      message:'ไม่สามารถเชื่อมต่อทะเบียนได้ กรุณาลองใหม่'
+    }};
+  }finally{
+    clearTimeout(timeoutId);
+  }
+}
+
+/* Convert only rendered interface text and option labels; backend IDs, values,
+   auth codes, numbers, spreadsheet series and HTTP payloads stay unchanged. */
+function thaiDisplayTree(node) {
+  if(!node)return;
+  if(node.nodeType===3){
+    var parent=node.parentElement;
+    if(!parent || parent.closest('script,style,textarea,code,pre,[contenteditable]'))return;
+    var changed=toThaiDigits(node.nodeValue);
+    if(changed!==node.nodeValue)node.nodeValue=changed;
+    return;
+  }
+  if(node.nodeType!==1)return;
+  if(node.matches('script,style,textarea,code,pre,[contenteditable]'))return;
+  var walk=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);
+  var textNodes=[];
+  while(walk.nextNode())textNodes.push(walk.currentNode);
+  textNodes.forEach(thaiDisplayTree);
+}
+var thaiDisplayObserver=new MutationObserver(function(records){
+  records.forEach(function(record){
+    if(record.type==='characterData')thaiDisplayTree(record.target);
+    if(record.type==='childList')record.addedNodes.forEach(thaiDisplayTree);
+  });
+});
+thaiDisplayTree(document.body);
+thaiDisplayObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
+var state = { staffCode: '', boot: null, tokens: {}, adminCode: '' };
+var registerRowsCache=[];var activeEditMemo=null;
+var loginInFlight = false;
+var showMsgHint = '';
+
+/* ================= date ================= */
+var BE_OFFSET = 543;
+/* maxDate is the end of the current CE year (2026), so 2569 is the last Buddhist
+   year the UI may show. Limit follows the current year instead of hardcoding 2026. */
+var MAX_CE_YEAR = new Date().getFullYear();
+var MAX_BE_YEAR = MAX_CE_YEAR + BE_OFFSET;
+/* CE -> BE with +543 applied EXACTLY ONCE. An input that is already a Buddhist
+   year (2568) should remain 2568 rather than becoming 3111. */
+function toBE(ceYear) {
+  var n = Number(ceYear);
+  return n >= 2400 ? n : n + BE_OFFSET;
+}
+function toCE(beYear) {
+  return Number(beYear) - BE_OFFSET;
+}
+
+/* v3.6.0 locale is an OBJECT (the v2 `language: 'th'` syntax was removed and
+   silently fell back to English). navTitles covers every navigation surface so
+   no Gregorian year leaks into the UI. */
+function thLocale() {
+  var months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  var days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  return {
+    days: days, daysShort: ['อา','จ','อ','พ','พฤ','ศ','ส'],
+    daysMin: ['อา','จ','อ','พ','พฤ','ศ','ส'],
+    months: months,
+    monthsShort: months.map(function(m){ return m.slice(0,3); }),
+    today: 'วันนี้', clear: 'ล้าง', firstDay: 1
+  };
+}
+function beYearRenderCell(args) {
+  if (args && args.cellType === 'year' && args.date) {
+    return { html: String(toBE(args.date.getFullYear())) };
+  }
+}
+function beNavTitles(loc) {
+  return {
+    days: function(dp) { return loc.months[dp.viewDate.getMonth()] + ' ' + toBE(dp.viewDate.getFullYear()); },
+    months: function(dp) { return String(toBE(dp.viewDate.getFullYear())); },
+    years: function(dp) {
+      var y = dp.viewDate.getFullYear();
+      return String(toBE(y - 5)) + ' – ' + String(toBE(y + 4));
+    }
+  };
+}
+
+var picker = null;
+function initPicker() {
+  if (picker) return;
+  if (typeof AirDatepicker === 'undefined') {
+    /* CDN blocked: fall back to a plain ISO date input so the form still works. */
+    var el = $('reqDate');
+    el.removeAttribute('readonly');
+    el.type = 'text';
+    el.placeholder='14 ต.ค. 2569';
+    el.value = formatBE(new Date());
+    el.addEventListener('change',function(){validateThaiDateFallback(el);});
+    return;
+  }
+  var today = new Date();
+  var loc = thLocale();
+  picker = new AirDatepicker('#reqDate', {
+    locale: loc,
+    /* Input shows dd/MM/พ.ศ.; the ISO CE value is preserved separately. */
+    dateFormat: function(d) { return formatBE(d); },
+    firstDay: 1,
+    autoClose: true,
+    /* One year back, end of the current CE year — no CE two-year lookback and
+       no silent future-date BE year. */
+    minDate: new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()),
+    maxDate: new Date(today.getFullYear(), 11, 31),
+    navTitles: beNavTitles(loc),
+    onRenderCell: beYearRenderCell,
+    onSelect: function (obj) { syncDate(obj && obj.date); }
+  });
+}
+
+/* Selected Date -> canonical ISO CE string used in the request payload. */
+function selectedISO(d) {
+  if (!d) return todayISO();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+    '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/* dd/MM/พ.ศ. display string. */
+var SHORT_TH_MONTHS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+  'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function formatBE(d) {
+  if (!d) return '';
+  return toThaiDigits(String(d.getDate())+' '+SHORT_TH_MONTHS[d.getMonth()]+' '+toBE(d.getFullYear()));
+}
+
+/* The picker writes the BE display text into the input; the ISO value the
+   server stores is kept in this hidden field, so no CE year is ever submitted
+   by accident and no BE year is ever displayed. */
+var reqDateISO = '';
+function syncDate(d) {
+  reqDateISO = selectedISO(d);
+  $('reqDate').value = formatBE(d);
+  var hidden = $('reqDateISO');
+  if (hidden) hidden.value = reqDateISO;
+}
+function validateThaiDateFallback(el){
+  var m=/^(\d{1,2})\s+([^\s]+)\s+(\d{4})$/.exec(toAsciiDigits(el.value.trim()));
+  if(!m){el.value=formatISOtoBE(reqDateISO);return;}
+  var d=Number(m[1]),mo=SHORT_TH_MONTHS.indexOf(m[2])+1,be=Number(m[3]),ce=be-543;
+  var date=new Date(ce,mo-1,d);
+  if(be<2400 || date.getFullYear()!==ce || date.getMonth()!==mo-1 || date.getDate()!==d){
+    el.value=formatISOtoBE(reqDateISO);return;
+  }
+  reqDateISO=selectedISO(date);$('reqDateISO').value=reqDateISO;el.value=formatBE(date);
+}
+/* Sheets date-formatted cells may reach the browser as a localized Date.toString,
+   e.g. "Wed Oct 14 2026 07:00:00 GMT+0700 (เวลาอินโดจีน)".
+   The canonical RequestDateISO is not empty; the previous ISO-only formatter
+   quietly blanked the date column. Convert presentation without rewriting SSOT. */
+function parseSchoolDateParts(value){
+  if(value===null || value===undefined || value==='')return null;
+  var str=toAsciiDigits(String(value)).trim();
+  var y,m,d,found=/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|[T\s])/.exec(str);
+  if(found){
+    y=Number(found[1]);m=Number(found[2]);d=Number(found[3]);
+  }else{
+    var english=/^(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})(?:\s|$)/i.exec(str);
+    if(english){
+      var mm=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        .findIndex(function(x){return english[1].slice(0,3).toLowerCase()===x.toLowerCase();});
+      if(mm<0)return null;
+      y=Number(english[3]);m=mm+1;d=Number(english[2]);
+    }else{
+      var parsed=new Date(str);
+      if(Number.isNaN(parsed.getTime()))return null;
+      var parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Bangkok',
+        year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(parsed);
+      var obj={};parts.forEach(function(part){obj[part.type]=part.value;});
+      y=Number(obj.year);m=Number(obj.month);d=Number(obj.day);
+    }
+  }
+  if(!Number.isInteger(y)||y<1900||y>2200||!Number.isInteger(m)||m<1||m>12||
+     !Number.isInteger(d)||d<1||d>31)return null;
+  var verified=new Date(Date.UTC(y,m-1,d));
+  if(verified.getUTCFullYear()!==y||verified.getUTCMonth()!==m-1||
+     verified.getUTCDate()!==d)return null;
+  return {year:y,month:m,day:d};
+}
+function formatISOtoBE(iso) {
+  var date=parseSchoolDateParts(iso);
+  if(!date)return '—';
+  return toThaiDigits(String(date.day)+' '+SHORT_TH_MONTHS[date.month-1]+
+    ' '+String(date.year+543));
+}
+function todayISO() {
+  var parts = new Intl.DateTimeFormat('en-US',
+    {timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'})
+    .formatToParts(new Date());
+  var m = {};
+  parts.forEach(function(p) { m[p.type] = p.value; });
+  return m.year + '-' + m.month + '-' + m.day;
+}
+
+/* ================= copy ================= */
+function copyText(txt, btn, okMsg) {
+  var done = function () {
+    var old = btn.dataset.label || '';
+    btn.dataset.label = old;
+    setText(btn, okMsg || '✅ คัดลอกแล้ว');
+    setTimeout(function () { setText(btn, old); }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done, function () { fallbackCopy(txt, done); });
+  } else { fallbackCopy(txt, done); }
+}
+function fallbackCopy(txt, cb) {
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); cb(); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+
+/* ================= bootstrap ================= */
+function renderChips(boot) {
+  var chips = $('chips'); chips.textContent = '';
+  var cfg = boot.config || {};
+  chips.appendChild(chip('📅 ' + (toBE(Number(boot.calendarYear)) || '—') + ' (พ.ศ.)', ''));
+  chips.appendChild(chip('🏷️ ' + (cfg.prefix || ''), ''));
+  chips.appendChild(chip(boot.numberingReady ? '✅ เปิดออกเลข' : '⛔ ปิดออกเลข', 'blocked'));
+  chips.appendChild(chip('สำหรับผู้บริหารและครู', ''));
+}
+function chip(text, cls) {
+  var s = document.createElement('span');
+  s.className = 'chip ' + (cls || '');
+  setText(s, text);
+  return s;
+}
+
+function renderLatest(boot) {
+  var box = $('latestBox'); box.textContent = '';
+  var wrap = document.createElement('div');
+  var latest = (boot.latest || []).find(function (m) { return m.DocumentNo; });
+  var label = document.createElement('span');
+  label.className = 'hint';
+  setText(label, 'เลขหมายล่าสุด');
+  wrap.appendChild(label);
+  var num = document.createElement('div');
+  num.className = 'num';
+  setText(num, latest ? latest.DocumentNo : 'ยังไม่มีเลขหมาย');
+  wrap.appendChild(num);
+  box.appendChild(wrap);
+
+  var cfg = boot.config || {};
+  var prefix=String(cfg.prefix||'พล.52006.03.1/');
+  setText($('seriesPrefix'),prefix);
+  var next = cfg.nextSerial;
+  $('submitBtn').disabled=false;
+  setText($('gateHint'), boot.numberingReady
+    ? ('พร้อมออกเลข · เลขถัดไป ' + (next || '—'))
+    : 'ยังไม่ได้ยืนยันเลขเริ่มต้นประจำปี จึงยังออกเลขไม่ได้');
+  setText($('issueReason'), boot.numberingReady
+    ? 'ตรวจข้อมูลให้ถูกต้องก่อนกดยืนยัน'
+    : 'กำหนดเลขเริ่มต้น /๑ แล้ว · รอเปิดใช้งานทะเบียนก่อนออกเลขจริง');
+}
+
+function renderAccount(boot) {
+  setText($('accountInfo'), 'ผู้บริหารและครู โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)');
+}
+
+var activePersonnelLabels=new Map();
+var activePersonnelById=new Map();
+var rosterUpdatedAt=0;
+var namePickerActive=-1;
+var shownNameSuggestions=[];
+function searchKey(value) {
+  return toAsciiDigits(String(value||'')).toLocaleLowerCase('th-TH')
+    .normalize('NFC').replace(/\s+/g,'').trim();
+}
+function closeNameSuggestions(){
+  $('personnelChoices').classList.add('hidden');
+  $('personnelSearch').setAttribute('aria-expanded','false');
+  $('personnelSearch').removeAttribute('aria-activedescendant');
+  namePickerActive=-1;shownNameSuggestions=[];
+}
+function choosePersonnel(item){
+  if(!item)return;
+  $('personnelSearch').value=toThaiDigits(item.label);
+  $('personnel').value=item.id;
+  $('personnelSearch').setAttribute('aria-invalid','false');
+  closeNameSuggestions();
+  $('subject').focus();
+}
+function openNameSuggestions(){
+  var term=$('personnelSearch').value.trim();
+  var query=searchKey(term);
+  var all=Array.from(activePersonnelById.values());
+  var filtered=query?all.filter(function(item){return searchKey(item.label).includes(query);}):all;
+  filtered.sort(function(a,b){return a.label.localeCompare(b.label,'th');});
+  shownNameSuggestions=filtered.slice(0,10);
+  namePickerActive=-1;
+  var list=$('personnelChoices');list.textContent='';
+  if(!filtered.length){
+    var empty=document.createElement('div');
+    empty.className='name-empty';
+    setText(empty,'ไม่พบชื่อที่ค้นหา กรุณาลองพิมพ์ชื่อหรือนามสกุลอื่น');
+    list.appendChild(empty);
+  }
+  shownNameSuggestions.forEach(function(item,index){
+    var btn=document.createElement('button');
+    btn.type='button';btn.id='name-choice-'+index;btn.setAttribute('role','option');
+    btn.className='name-choice';btn.setAttribute('aria-selected','false');
+    setText(btn,item.label);
+    btn.addEventListener('pointerdown',function(e){e.preventDefault();});
+    btn.addEventListener('click',function(){choosePersonnel(item);});
+    list.appendChild(btn);
+  });
+  if(filtered.length>10){
+    var n=document.createElement('div');n.className='name-extra';
+    setText(n,'พบ '+filtered.length+' รายชื่อ · พิมพ์เพิ่มเพื่อค้นหาให้แคบลง');
+    list.appendChild(n);
+  }
+  list.classList.remove('hidden');
+  $('personnelSearch').setAttribute('aria-expanded','true');
+}
+function setActiveNameChoice(next){
+  var n=shownNameSuggestions.length;
+  if(!n)return;
+  namePickerActive=(next+n)%n;
+  $('personnelChoices').querySelectorAll('[role="option"]').forEach(function(el,index){
+    var current=index===namePickerActive;
+    el.setAttribute('aria-selected',current?'true':'false');
+    if(current)el.scrollIntoView({block:'nearest'});
+  });
+  $('personnelSearch').setAttribute('aria-activedescendant','name-choice-'+namePickerActive);
+}
+function applySelectedPersonnelText(){
+  var text=$('personnelSearch').value.trim();
+  var id=activePersonnelLabels.get(text) || activePersonnelLabels.get(toAsciiDigits(text)) || '';
+  $('personnel').value=id;
+  $('personnelSearch').setAttribute('aria-invalid',text&&!id?'true':'false');
+}
+function fillPersonnel(list) {
+  var staff=Array.isArray(list)?list:[];
+  var select=$('personnel'),search=$('personnelSearch');
+  var previousId=select.value;
+  select.textContent='';activePersonnelLabels.clear();activePersonnelById.clear();
+  var first=document.createElement('option');first.value='';select.appendChild(first);
+  var names={};
+  staff.forEach(function(p){if(p&&p.name)names[p.name]=(names[p.name]||0)+1;});
+  staff.forEach(function(p){
+    if(!p || !p.id || !p.name)return;
+    var label=names[p.name]>1?p.name+' ('+(p.staffGroup||'บุคลากร')+')':p.name;
+    if(activePersonnelLabels.has(label))return;
+    activePersonnelLabels.set(label,p.id);
+    activePersonnelLabels.set(toThaiDigits(label),p.id);
+    activePersonnelById.set(p.id,{id:p.id,label:label});
+    var o=document.createElement('option');o.value=p.id;setText(o,label);
+    select.appendChild(o);
+  });
+  if(activePersonnelById.has(previousId)){
+    select.value=previousId;
+    search.value=toThaiDigits(activePersonnelById.get(previousId).label);
+  }else {select.value='';search.value='';}
+  closeNameSuggestions();
+  var requested=$('filterRequester').value;
+  var filter=$('filterRequester');filter.textContent='';
+  var all=document.createElement('option');all.value='';setText(all,'ทุกคน');filter.appendChild(all);
+  staff.forEach(function(p){
+    var opt=document.createElement('option');opt.value=p.id;
+    setText(opt,p.name);filter.appendChild(opt);
+  });
+  filter.value=requested;
+  rosterUpdatedAt=Date.now();
+  setText($('personnelStatus'),staff.length
+    ? 'พิมพ์ชื่อหรือนามสกุลเพื่อค้นหา'
+    : 'ไม่พบรายชื่อ กรุณาอัปเดตรายชื่อหรือติดต่อผู้ดูแล');
+}
+function fillCategories(cats) {
+  var sel = $('category'); sel.textContent = '';
+  var flt=$('filterCategory');
+  var selected=flt.value;flt.textContent='';
+  var all=document.createElement('option');all.value='';all.textContent='ทุกประเภท';flt.appendChild(all);
+  // Exclude this category from new issuance and filter choices while
+  // retaining any historical records unchanged in the canonical register.
+  var allowed=(cats||[]).filter(function(c){
+    return String(c||'').trim()!=='หนังสือรับรองอนามัย';
+  });
+  allowed.forEach(function(c){
+    var o=document.createElement('option');o.value=c;setText(o,c);sel.appendChild(o);
+    var f=document.createElement('option');f.value=c;setText(f,c);flt.appendChild(f);
+  });
+  flt.value=selected;
+}
+
+var loginSequence = 0;
+var loginTimerStart = 0;
+function setupCurrentDate() {
+  var today = new Date();
+  try {
+    initPicker();
+    if (picker && typeof picker.selectDate === 'function') {
+      picker.selectDate(today,{silent:true});
+    }
+    syncDate(today);
+  } catch (err) {
+    // Controlled native date fallback must not prevent personnel/category loading.
+    picker=null;
+    var el=$('reqDate');
+    el.readOnly=false; el.type='text';el.placeholder='14 ต.ค. 2569';
+    el.value=formatBE(today);
+    reqDateISO=todayISO(); $('reqDateISO').value=reqDateISO;
+    el.onchange=function(){validateThaiDateFallback(el);};
+  }
+  setText($('dateTodayHint'), 'วันที่ปัจจุบัน '+formatBE(today));
+}
+async function hydrateAfterLogin(code,seq) {
+  var t=performance.now();
+  showMsg($('histMsg'),'กำลังโหลดประวัติจากทะเบียน…','warn');
+  setText($('personnelStatus'),'กำลังอ่านรายชื่อผู้บริหารและครูจากฐานกลาง…');
+  var r=await call('getBootstrap',[code]);
+  if(seq!==loginSequence || !state.staffCode) return;
+  if(!r || !r.ok){
+    setText($('personnelStatus'), 'โหลดรายชื่อไม่สำเร็จ: '+((r&&r.error&&r.error.message)||'โปรดลองโหลดใหม่'));
+    showMsg($('histMsg'),'โหลดข้อมูลทะเบียนไม่สำเร็จ โปรดลองใหม่','err');
+    return;
+  }
+  state.boot=r.data;
+  fillPersonnel(r.data.personnel);
+  fillCategories(r.data.categories);
+  renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
+  hideMsg($('histMsg'));
+  await loadRegister();
+  setText($('loginPerf'), 'รายชื่อและประวัติพร้อมใช้งานแล้ว');
+}
+async function doLogin() {
+  if(loginInFlight)return;
+  var code=$('staffCode').value.trim();
+  if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเจ้าหน้าที่','err');return;}
+  loginInFlight=true;
+  var seq=++loginSequence;
+  var started=performance.now();
+  var btn=$('loginBtn');
+  busy(btn,true,'กำลังยืนยันสิทธิ์…');
+  var r;
+  try{r=await call('fastAuth',[code]);}
+  catch(e){r={ok:false,error:{message:'ติดต่อระบบตรวจรหัสไม่ได้'}};}
+  finally{loginInFlight=false;busy(btn,false);}
+  if(seq!==loginSequence)return;
+  if(!r || !r.ok){
+    showMsg($('loginMsg'),(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ','err');
+    return;
+  }
+  state.staffCode=code;state.boot=r.data;
+  $('staffCode').value='';
+  hideMsg($('loginMsg'));
+  $('loginCard').classList.add('hidden');
+  $('appBody').classList.remove('hidden');
+  $('topActions').classList.remove('hidden');
+  fillCategories(r.data.categories||[]);
+  fillPersonnel([]);
+  renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
+  setupCurrentDate();
+  setText($('loginPerf'),'เข้าสู่ระบบเรียบร้อย · กำลังเตรียมรายชื่อ');
+  hydrateAfterLogin(code,seq);
+}
+
+function ensureYearFilters(){
+  var sel=$('filterYear');if(sel.options.length>1)return;
+  var yr=Number(todayISO().slice(0,4));
+  for(var y=yr;y>=yr-5;y--){
+    var el=document.createElement('option');el.value=String(y);
+    el.textContent='พ.ศ. '+String(y+543);sel.appendChild(el);
+  }
+}
+async function loadHistory() {
+  if(!state.staffCode)return;
+  ensureYearFilters();
+  var s=$('filterStatus').value;
+  var params={
+    query:toAsciiDigits($('q').value.trim()),
+    status:s,
+    category:$('filterCategory').value,
+    requesterPersonnelId:$('filterRequester').value,
+    year:Number($('filterYear').value)||0,
+    month:Number($('filterMonth').value)||0,
+    includeCancelled: $('showCancelled').checked || s==='CANCELLED',
+    limit:100
+  };
+  var r=await call('listMemoRequests',[state.staffCode,params]);
+  if(!r || !r.ok){
+    showMsg($('histMsg'),(r&&r.error&&r.error.message)||'อ่านประวัติไม่สำเร็จ','err');return;
+  }
+  hideMsg($('histMsg'));
+  renderHistory(r.data.rows||[]);
+}
+
+var adaptiveResizePending=false;
+function fitResponsiveTypography(){
+  var width=window.innerWidth||945, height=window.innerHeight||850;
+  var size=Math.min(17,Math.max(12.75,
+    Math.min(16.5,13.4+Math.max(0,width-390)*.0035),
+    14+Math.max(0,height-620)*.008));
+  document.documentElement.style.setProperty('--memo-base-font',size.toFixed(2)+'px');
+}
+window.addEventListener('resize',function(){
+  if(adaptiveResizePending)return;
+  adaptiveResizePending=true;
+  requestAnimationFrame(function(){
+    adaptiveResizePending=false;fitResponsiveTypography();
+    if(state.staffCode)renderRegisterTable(registerRowsCache);
+  });
+});
+fitResponsiveTypography();
+function renderRegisterTable(rows) {
+  var tbody=$('registerRows');tbody.textContent='';
+  var valid=(rows||[]).filter(function(m){return m.DocumentNo && m.Status==='ISSUED';});
+  setText($('registerStatus'),valid.length
+    ? 'แสดงรายการที่ออกเลขแล้ว '+valid.length+' รายการ'
+    : 'ยังไม่มีเลขทะเบียนที่ออกแล้ว');
+  if(!valid.length){
+    var blank=document.createElement('tr'),cell=document.createElement('td');
+    cell.colSpan=state.adminCode?7:6;cell.textContent='ยังไม่มีเลขทะเบียนที่ออกแล้ว';
+    blank.appendChild(cell);tbody.appendChild(blank);
+  }
+  // Main dashboard is intentionally a fixed-height recent-register preview.
+  // The searchable history dialog contains the complete dataset.
+  var maxPreview=(window.innerHeight<740?1:(window.innerHeight<930?2:4));
+  valid.slice(0,maxPreview).forEach(function(m){
+    var row=document.createElement('tr');
+    [String(m.SerialNo||String(m.DocumentNo||'').split('/').pop()),m.DocumentNo,formatISOtoBE(m.RequestDateISO),m.RequesterDisplayName,
+      m.Subject,m.Category].forEach(function(v){
+      var td=document.createElement('td');setText(td,v||'');row.appendChild(td);
+    });
+    if(state.adminCode){
+      var td=document.createElement('td');var actions=document.createElement('div');
+      actions.className='row-tools';
+      var edit=document.createElement('button');edit.type='button';edit.className='btn-ghost';
+      edit.textContent='แก้ไข';edit.addEventListener('click',function(){openEditMemo(m);});
+      var remove=document.createElement('button');remove.type='button';remove.className='btn-danger';
+      remove.textContent='ลบ';remove.addEventListener('click',function(){deleteMemoByAdmin(m);});
+      actions.appendChild(edit);actions.appendChild(remove);
+      td.appendChild(actions);row.appendChild(td);
+    }
+    tbody.appendChild(row);
+  });
+  document.querySelectorAll('.register-table .admin-only').forEach(function(el){
+    el.classList.toggle('hidden',!state.adminCode);
+  });
+}
+async function loadRegister() {
+  if(!state.staffCode)return;
+  var r=await call('listMemoRequests',[state.staffCode,{
+    status:'ISSUED',limit:100,includeCancelled:false
+  }]);
+  if(!r || !r.ok){setText($('registerStatus'),'ไม่สามารถโหลดทะเบียนได้ กรุณาลองใหม่');return;}
+  registerRowsCache=r.data.rows||[];
+  renderRegisterTable(registerRowsCache);
+}
+function openEditMemo(m) {
+  if(!state.adminCode)return;
+  activeEditMemo=m;
+  setText($('editDoc'),'เลขที่ '+m.DocumentNo);
+  $('editSubject').value=m.Subject||'';
+  $('editCategory').value=m.Category||'';
+  $('editNotes').value=m.Notes||'';
+  hideMsg($('editMsg'));
+  $('editDialog').showModal();
+}
+async function deleteMemoByAdmin(m) {
+  if(!state.adminCode)return;
+  if(!confirm('ยืนยันลบเลขที่ '+m.DocumentNo+' จากรายการใช้งาน?\\nประวัติจะเก็บไว้เพื่อตรวจสอบ'))return;
+  var reason=prompt('เหตุผลที่ลบเลขทะเบียน');
+  if(reason===null)return;
+  if(!reason.trim()){alert('กรุณาระบุเหตุผล');return;}
+  var wantsReturn=confirm('ต้องการคืนเลขท้ายสุดของวันนี้หรือไม่?\\nคืนได้เฉพาะเลขที่ยังไม่ใช้และมีการอนุมัตินโยบาย');
+  var policy='';
+  if(wantsReturn){
+    policy=prompt('เลขอ้างอิงเอกสารอนุมัตินโยบายคืนเลข (ไม่มีให้กดยกเลิก)')||'';
+    if(!policy.trim()){alert('ยังไม่มีเอกสารอนุมัติ ไม่สามารถคืนเลขได้');return;}
+    if(!confirm('ยืนยันว่าเลขนี้ยังไม่ถูกอ้างอิงหรือส่งออกไปที่ใด?'))return;
+  }
+  var r=await call('adminVoidIssued',[{adminCode:state.adminCode,
+    memoId:m.MemoID,expectedRevision:Number(m.Revision),reason:reason.trim(),
+    confirmed:true,returnNumber:wantsReturn,policyApprovalRef:policy,
+    noExternalUseAttested:wantsReturn}]);
+  if(!r||!r.ok){alert((r&&r.error&&r.error.message)||'ลบเลขไม่สำเร็จ');return;}
+  await loadRegister();await refreshBootstrap();
+}
+function renderHistory(rows) {
+  rows=(rows||[]).filter(function(m){return !!m.DocumentNo;});
+  var box = $('history'); box.textContent = '';
+  if (!rows.length) {
+    var e = document.createElement('div'); e.className = 'hint';
+    setText(e, 'ไม่พบรายการ');
+    box.appendChild(e); return;
+  }
+  rows.forEach(function (m) {
+    var item = document.createElement('div'); item.className = 'hist-item';
+
+    var top = document.createElement('div'); top.className = 'hist-top';
+    var left = document.createElement('div');
+
+    var doc = document.createElement('div'); doc.className = 'hist-doc';
+    setText(doc, m.DocumentNo || '(ยังไม่ได้ออกเลข)');
+    left.appendChild(doc);
+
+    var sub = document.createElement('div'); sub.className = 'hist-sub';
+    setText(sub, m.Subject + ' · ' + m.RequesterDisplayName + ' · ' + formatISOtoBE(m.RequestDateISO));
+    left.appendChild(sub);
+
+    var badge = document.createElement('span'); badge.className = 'badge ' + m.Status;
+    setText(badge, statusThai(m.Status));
+
+    top.appendChild(left); top.appendChild(badge);
+    item.appendChild(top);
+
+    if (m.Status === 'CANCEL_REQUESTED') {
+      var w = document.createElement('div'); w.className = 'hint';
+      setText(w, 'รอผู้ดูแลระบบยืนยันการยกเลิก' + (m.CancellationReason ? ' — ' + m.CancellationReason : ''));
+      item.appendChild(w);
+    }
+    if(m.DocumentNo){
+      var cp=document.createElement('button');cp.type='button';cp.className='btn-ghost';
+      cp.textContent='คัดลอกเลขที่';
+      cp.addEventListener('click',function(){copyText('ที่ '+m.DocumentNo,cp,'คัดลอกแล้ว');});
+      item.appendChild(cp);
+    }
+    box.appendChild(item);
+  });
+}
+
+function statusThai(s) {
+  return ({
+    ISSUED: 'ออกเลขแล้ว',
+    QUEUED_NO_SERIAL: 'รายการเดิมที่ยังไม่ออกเลข',
+    CANCEL_REQUESTED: 'รอยืนยันยกเลิก',
+    CANCELLED: 'ยกเลิกแล้ว',
+    ACTIVE: 'ใช้งาน',
+    ISSUE_FAILED_ROLLBACK: 'ยกเลิกอัตโนมัติ (ผิดพลาด)'
+  })[s] || s || '-';
+}
+
+/* ================= request ================= */
+/* Stable nonce: ONE id per button click. Kept across retries of the same click
+   so a network retry replays idempotently, and regenerated for every new
+   intentional submission. Prevents two anonymous teachers from colliding. */
+var pendingNonce = null;
+function nextRequestId() {
+  if (pendingNonce) return pendingNonce;
+  var rand = (window.crypto && window.crypto.getRandomValues)
+    ? Array.prototype.map.call(window.crypto.getRandomValues(new Uint32Array(2)),
+        function (n) { return n.toString(16); }).join('')
+    : String(Date.now()) + Math.floor(Math.random() * 1e9).toString(16);
+  pendingNonce = 'RQ-' + rand.toUpperCase();
+  return pendingNonce;
+}
+
+async function submitRequest() {
+  var subject = $('subject').value.trim();
+  if (!subject) { showMsg($('submitMsg'), 'กรุณากรอกหัวข้อ/เรื่อง', 'err'); return; }
+
+  applySelectedPersonnelText();
+  var personnelId=$('personnel').value||'';
+  if(!personnelId){
+    showMsg($('submitMsg'),'กรุณาเลือกชื่อจากรายชื่อบุคลากรของโรงเรียน','err');return;
+  }
+  /* Allow a verified staff-code holder to submit a new teacher name directly.
+     The backend stores it as LOCAL_PERSONNEL_CANDIDATE, not in Personnel Master. */
+
+  var payload = {
+    staffCode: state.staffCode,
+    subject: subject,
+    category: $('category').value,
+    requestDateISO: reqDateISO || ($('reqDateISO').value || todayISO()),
+    notes: $('notes').value.trim(),
+    requesterPersonnelId: personnelId,
+    requesterDisplayName: '',
+    requestId: nextRequestId()
+  };
+
+  if(!state.boot || !state.boot.numberingReady){
+    showMsg($('submitMsg'),'ทะเบียนกำหนดเลขเริ่มต้น /๑ แล้ว แต่ยังรอเปิดใช้งานเพื่อออกเลขจริง กรุณาติดต่อผู้ดูแลทะเบียน','warn');
+    $('submitMsg').scrollIntoView({block:'nearest',behavior:'smooth'});return;
+  }
+  if(!confirm('ยืนยันออกเลขและบันทึกทะเบียนทันที?\nหลังบันทึกผู้ใช้งานทั่วไปจะไม่สามารถแก้ไขหรือลบได้'))return;
+  var btn = $('submitBtn');
+  busy(btn, true, 'กำลังออกเลขทะเบียน…');
+  hideMsg($('submitMsg'));
+  var r = await call('requestMemoNumber', [payload]);
+  busy(btn, false);
+
+  if (!r || !r.ok) {
+    showMsg($('submitMsg'), (r && r.error && r.error.message) || 'ออกเลขไม่สำเร็จ', 'err');
+    return;
+  }
+
+  var m = r.data.memo || {};
+  /* A new successful submission invalidates the previous nonce: the next
+     button click is an intentional NEW request. Replays (idempotentReplay)
+     keep it, so a repeated call with the same id stays idempotent. */
+  pendingNonce = r.data.idempotentReplay ? pendingNonce : null;
+  $('subject').value = ''; $('notes').value = '';
+
+  if (r.data.allocated) {
+    $('resultBox').classList.remove('hidden');
+    setText($('resultDocNo'), m.DocumentNo);
+    setText($('resultMeta'), 'หัวข้อ: ' + m.Subject + ' · ' + m.RequesterDisplayName +
+      ' · รหัสหนังสือ ' + m.MemoID);
+    $('copyBtn').dataset.label = '📋 คัดลอก “ที่ เลขหมาย”';
+    showMsg($('submitMsg'), r.data.idempotentReplay
+      ? 'คำขอนี้เคยส่งมาแล้ว — ระบบแสดงผลลัพธ์เดิม (ไม่ออกเลขซ้ำ)'
+      : 'ออกเลขหมายเรียบร้อย', 'ok');
+  } else {
+    $('resultBox').classList.add('hidden');
+    showMsgHint = 'ยังไม่สามารถออกเลขทะเบียนได้ ไม่มีการเพิ่มรายการใหม่';
+    showMsg($('submitMsg'), showMsgHint, 'warn');
+  }
+
+  /* Token is kept in memory ONLY — never written to localStorage/sessionStorage.
+     Populating state.tokens is what makes the cancel flow work after the
+     token box is dismissed; a reload loses it by design. */
+  if (false && r.data.cancelToken && m.MemoID) {
+    state.tokens[m.MemoID] = r.data.cancelToken;
+    $('tokenBox').classList.remove('hidden');
+    setText($('tokenValue'), r.data.cancelToken);
+    $('copyTokenBtn').dataset.label = '📋 คัดลอกรหัสนี้';
+    if (m.Status !== 'ISSUED') {
+      showMsg($('submitMsg'),
+        (showMsgHint || '') + '\n\nบันทึกรหัสยืนยันการยกเลิกไว้ เพื่อใช้ยกเลิกคำขอนี้ภายหลัง ' +
+        '(แสดงครั้งเดียว ไม่มีทางดูซ้ำในระบบ)', 'warn');
+    }
+  } else {
+    $('tokenBox').classList.add('hidden');
+  }
+  await loadRegister();
+  await refreshBootstrap();
+}
+
+/* ================= cancel ================= */
+function openCancel(memo) {
+  var token = state.tokens[memo.MemoID];
+  var useTyped = false;
+  if (!token) {
+    var t = prompt('กรุณากรอกรหัสยืนยันการยกเลิกที่ได้รับตอนออกเลข (แสดงครั้งเดียว)\n' +
+      'หมายเหตุ: ยกเลิกแล้วเลขนี้จะไม่ถูกนำกลับมาใช้');
+    if (t === null) return;
+    token = t.trim(); useTyped = true;
+  }
+  if (!token) return;
+  var reason = prompt('เหตุผลที่ยกเลิก:', 'ยกเลิกหนังสือ');
+  if (reason === null) return;
+  state.tokens[memo.MemoID] = token;
+  doCancel(memo.MemoID, token, reason.trim(), useTyped);
+}
+
+async function doCancel(memoId, token, reason, typed) {
+  if (!reason) { showMsg($('histMsg'), 'กรุณาระบุเหตุผลที่ยกเลิก', 'err'); return; }
+  hideMsg($('histMsg'));
+  /* ONE payload object. google.script.run maps positional args to parameters, so
+   the previous two-argument call bound payload = staffCode (a string) and failed
+   the typeof check in verifyCode_ with AUTH_FAILED on every attempt. */
+var r = await call('cancelMemoRequest', [{ staffCode: state.staffCode, memoId: memoId,
+    token: token, reason: reason }]);
+  if (!r || !r.ok) {
+    if (typed) delete state.tokens[memoId];
+    showMsg($('histMsg'), (r && r.error && r.error.message) || 'ยกเลิกไม่สำเร็จ', 'err');
+    return;
+  }
+  delete state.tokens[memoId];
+  showMsg($('histMsg'), 'ส่งคำขอยกเลิกแล้ว รอผู้ดูแลระบบยืนยัน', 'ok');
+  await loadHistory();
+}
+
+async function refreshBootstrap() {
+  var r = await call('getBootstrap', [state.staffCode]);
+  if (r && r.ok) { state.boot = r.data; renderLatest(r.data); renderChips(r.data); }
+}
+
+function clearAndFocusLogin(){
+  var field=$('staffCode');
+  field.value='';
+  // Defer until login card is made visible after UI transitions.
+  requestAnimationFrame(function(){
+    field.value='';
+    if(!$('loginCard').classList.contains('hidden'))
+      field.focus({preventScroll:true});
+  });
+}
+function doLogout() {
+  ++loginSequence;
+  state.staffCode = ''; state.boot = null; state.tokens = {};state.adminCode='';document.body.classList.remove('admin-active');
+  $('appBody').classList.add('hidden');
+  $('topActions').classList.add('hidden');
+  closeNameSuggestions();
+  $('loginCard').classList.remove('hidden');
+  $('resultBox').classList.add('hidden');
+  $('tokenBox').classList.add('hidden');
+  $('history').textContent = '';registerRowsCache=[];$('registerRows').textContent='';
+  hideMsg($('loginMsg'));
+  clearAndFocusLogin();
+  $('personnelSearch').value='';
+}
+
+/* ================= events ================= */
+window.addEventListener('pageshow',function(){
+  if(!state.staffCode)clearAndFocusLogin();
+});
+document.addEventListener('DOMContentLoaded',function(){
+  if(!state.staffCode)clearAndFocusLogin();
+});
+if(document.readyState!=='loading' && !state.staffCode)clearAndFocusLogin();
+
+$('loginForm').addEventListener('submit', function (event) {
+  event.preventDefault();
+  doLogin();
+});
+$('historyOpen').addEventListener('click',function(){
+  loadHistory();$('historyDialog').showModal();
+});
+$('historyClose').addEventListener('click',function(){$('historyDialog').close();});
+$('adminOpen').addEventListener('click',function(){
+  $('adminPass').value='';$('adminDialog').showModal();
+});
+$('adminClose').addEventListener('click',function(){$('adminDialog').close();});
+$('adminUnlock').addEventListener('click',async function(){
+  var code=$('adminPass').value;
+  if(!code){setText($('adminMsg'),'กรุณากรอกรหัสผู้ดูแล');return;}
+  var r=await call('adminAuthenticate',[code]);
+  $('adminPass').value='';
+  if(!r || !r.ok){setText($('adminMsg'),(r&&r.error&&r.error.message)||'รหัสไม่ถูกต้อง');return;}
+  state.adminCode=code;
+  document.body.classList.add('admin-active');
+  $('adminOpen').textContent='ผู้ดูแลทะเบียน • เปิดอยู่';
+  $('adminLock').classList.remove('hidden');
+  $('adminDialog').close();renderRegisterTable(registerRowsCache);
+});
+$('adminLock').addEventListener('click',function(){
+  state.adminCode='';document.body.classList.remove('admin-active');
+  $('adminOpen').textContent='⚙️ ผู้ดูแลระบบ';
+  $('adminLock').classList.add('hidden');
+  setText($('adminMsg'),'ปิดสิทธิ์ผู้ดูแลแล้ว');
+  renderRegisterTable(registerRowsCache);
+});
+$('editClose').addEventListener('click',function(){$('editDialog').close();});
+var lastAdminActivity=Date.now();
+document.addEventListener('pointerdown',function(){lastAdminActivity=Date.now();},true);
+document.addEventListener('keydown',function(){lastAdminActivity=Date.now();},true);
+function lockAdminSession() {
+  state.adminCode='';
+  document.body.classList.remove('admin-active');
+  $('adminOpen').textContent='⚙️ ผู้ดูแลระบบ';
+  $('adminLock').classList.add('hidden');
+  renderRegisterTable(registerRowsCache);
+}
+setInterval(function(){
+  if(state.adminCode && Date.now()-lastAdminActivity>900000)lockAdminSession();
+},60000);
+$('editSave').addEventListener('click',async function(){
+  var m=activeEditMemo;
+  if(!m || !state.adminCode)return;
+  if(!confirm('ยืนยันแก้ไขทะเบียนโดยผู้ดูแล?'))return;
+  var r=await call('adminUpdateIssued',[{
+    adminCode:state.adminCode,memoId:m.MemoID,expectedRevision:Number(m.Revision),
+    subject:$('editSubject').value.trim(),category:$('editCategory').value.trim(),
+    notes:$('editNotes').value.trim()
+  }]);
+  if(!r || !r.ok){showMsg($('editMsg'),(r&&r.error&&r.error.message)||'ไม่สามารถแก้ไขได้','err');return;}
+  $('editDialog').close();
+  await loadRegister();await refreshBootstrap();
+});
+$('subject').addEventListener('keydown',function(e){
+  if(e.key==='Enter' && !e.shiftKey && !e.isComposing){
+    e.preventDefault();
+    $('submitBtn').focus();
+  }
+});
+$('submitBtn').addEventListener('click', submitRequest);
+$('searchBtn').addEventListener('click', loadHistory);
+$('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadHistory(); });
+$('showCancelled').addEventListener('change', loadHistory);
+$('logoutBtn').addEventListener('click', doLogout);
+$('copyBtn').addEventListener('click', function () {
+  var txt = $('resultDocNo').textContent;
+  copyText('ที่ ' + txt, $('copyBtn'), '✅ คัดลอกแล้ว');
+});
+$('copyTokenBtn').addEventListener('click', function () {
+  copyText($('tokenValue').textContent, $('copyTokenBtn'), '✅ คัดลอกแล้ว');
+});
+$('personnelSearch').addEventListener('input',function(){
+  $('personnel').value='';
+  applySelectedPersonnelText();
+  openNameSuggestions();
+});
+$('personnelSearch').addEventListener('focus',openNameSuggestions);
+$('personnelSearch').addEventListener('click',openNameSuggestions);
+$('personnelSearch').addEventListener('change',applySelectedPersonnelText);
+$('personnelSearch').addEventListener('keydown',function(e){
+  if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+    e.preventDefault();
+    if($('personnelChoices').classList.contains('hidden'))openNameSuggestions();
+    setActiveNameChoice(namePickerActive+(e.key==='ArrowDown'?1:-1));return;
+  }
+  if(e.key==='Enter' && !e.isComposing){
+    e.preventDefault();
+    if(!$('personnelChoices').classList.contains('hidden') && shownNameSuggestions.length){
+      choosePersonnel(shownNameSuggestions[namePickerActive<0?0:namePickerActive]);
+    }else{
+      applySelectedPersonnelText();
+      if($('personnel').value){closeNameSuggestions();$('subject').focus();}
+      else if($('personnelSearch').value.trim()){openNameSuggestions();}
+    }
+    return;
+  }
+  if(e.key==='Escape'){closeNameSuggestions();}
+});
+document.addEventListener('pointerdown',function(e){
+  if(!$('personnelLookup').contains(e.target))closeNameSuggestions();
+});
+['filterYear','filterMonth','filterStatus','filterCategory','filterRequester'].forEach(function(id){
+  $(id).addEventListener('change',loadHistory);
+});
+$('resetFilters').addEventListener('click',function(){
+  ['filterYear','filterMonth','filterStatus','filterCategory','filterRequester'].forEach(function(id){$(id).value='';});
+  $('q').value='';$('showCancelled').checked=false;loadHistory();
+});
+// Only refresh while the user is active; no duplicate personnel storage.
+var rosterRefreshPending=false;
+async function refreshLiveDirectory(){
+  if(!state.staffCode || document.hidden || rosterRefreshPending)return;
+  rosterRefreshPending=true;
+  try{ await hydrateAfterLogin(state.staffCode,loginSequence); }finally{rosterRefreshPending=false;}
+}
+setInterval(function(){if(Date.now()-rosterUpdatedAt>180000)refreshLiveDirectory();},60000);
+window.addEventListener('focus',function(){
+ if(state.staffCode && Date.now()-rosterUpdatedAt>60000)refreshLiveDirectory();
+});
+document.addEventListener('visibilitychange',function(){
+ if(!document.hidden && state.staffCode && Date.now()-rosterUpdatedAt>60000)refreshLiveDirectory();
+});
+
+function setReadableFont(delta) {
+  var base=Math.min(20,Math.max(15,12+window.innerWidth*.0048));
+  var desired=base+(delta||0);
+  document.documentElement.style.fontSize=Math.max(14,Math.min(24,desired))+'px';
+}
+setReadableFont(0);
+window.addEventListener('resize',function(){setReadableFont(0);});
+$('reloadRosterBtn').addEventListener('click',function(){
+  if(!state.staffCode)return;
+  hydrateAfterLogin(state.staffCode,loginSequence);
+});
+
+</script>
+</body>
+</html>
