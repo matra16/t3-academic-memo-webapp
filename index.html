@@ -491,6 +491,9 @@
     .top-actions{gap:5px}
     .top-actions button{font-size:.75rem;padding:4px 6px}
   }
+  #history[aria-busy="true"]{opacity:.83;transition:opacity .15s}
+  #histMsg:not(:empty){min-height:30px;line-height:1.35}
+  #historyDialog .hist-item{content-visibility:auto;contain-intrinsic-size:auto 82px}
   </style>
 </head>
 <body>
@@ -807,6 +810,17 @@ thaiDisplayTree(document.body);
 thaiDisplayObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
 var state = { staffCode: '', boot: null, tokens: {}, adminCode: '' };
 var registerRowsCache=[];var activeEditMemo=null;
+/* Browser-memory ONLY, 45-second validated-history cache. No credentials,
+   staff master, or official register records are stored in LocalStorage. */
+var historyQuerySeq=0;
+var historyCache=new Map();
+var historyInFlight=new Map();
+var HISTORY_CACHE_MS=45000;
+var historySearchDebounceTimer=null;
+function invalidateHistoryCache(){
+  ++historyQuerySeq;historyCache.clear();historyInFlight.clear();
+}
+
 var loginInFlight = false;
 var showMsgHint = '';
 
@@ -1201,8 +1215,11 @@ async function hydrateAfterLogin(code,seq) {
   fillCategories(r.data.categories);
   renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
   hideMsg($('histMsg'));
-  await loadRegister();
-  setText($('loginPerf'), 'รายชื่อและประวัติพร้อมใช้งานแล้ว');
+  // getBootstrap already includes a verified recent register snapshot; avoid
+  // a second identical Google Apps Script invocation on every login.
+  registerRowsCache=(r.data.history||[]).filter(function(m){return m&&m.Status==='ISSUED';});
+  renderRegisterTable(registerRowsCache);
+  setText($('loginPerf'),'รายชื่อและทะเบียนพร้อมใช้งานแล้ว');
 }
 async function doLogin() {
   if(loginInFlight)return;
@@ -1244,26 +1261,80 @@ function ensureYearFilters(){
     el.textContent='พ.ศ. '+String(y+543);sel.appendChild(el);
   }
 }
-async function loadHistory() {
-  if(!state.staffCode)return;
-  ensureYearFilters();
-  var s=$('filterStatus').value;
-  var params={
+function buildHistoryParams() {
+  var status=$('filterStatus').value;
+  return {
     query:toAsciiDigits($('q').value.trim()),
-    status:s,
+    status:status,
     category:$('filterCategory').value,
     requesterPersonnelId:$('filterRequester').value,
     year:Number($('filterYear').value)||0,
     month:Number($('filterMonth').value)||0,
-    includeCancelled: $('showCancelled').checked || s==='CANCELLED',
+    includeCancelled:$('showCancelled').checked||status==='CANCELLED',
     limit:100
   };
-  var r=await call('listMemoRequests',[state.staffCode,params]);
-  if(!r || !r.ok){
-    showMsg($('histMsg'),(r&&r.error&&r.error.message)||'อ่านประวัติไม่สำเร็จ','err');return;
+}
+async function loadHistory(forceRefresh) {
+  if(!state.staffCode)return;
+  ensureYearFilters();
+  var seq=++historyQuerySeq;
+  var params=buildHistoryParams();
+  var key=JSON.stringify(params),force=(forceRefresh===true);
+  var cached=historyCache.get(key);
+  if(!force&&cached&&Date.now()-cached.at<HISTORY_CACHE_MS){
+    renderHistory(cached.rows);
+    showMsg($('histMsg'),'แสดงผลที่โหลดล่าสุด · กดค้นหาเพื่ออัปเดตข้อมูล','ok');
+    $('history').setAttribute('aria-busy','false');
+    return;
   }
-  hideMsg($('histMsg'));
-  renderHistory(r.data.rows||[]);
+  var preview=!params.query&&!params.status&&!params.category&&!params.requesterPersonnelId&&
+    !params.year&&!params.month&&!params.includeCancelled&&
+    state.boot&&Array.isArray(state.boot.history)?state.boot.history:[];
+  if(preview.length){
+    renderHistory(preview);
+    showMsg($('histMsg'),'กำลังตรวจสอบประวัติทั้งหมด… แสดงข้อมูลล่าสุดระหว่างรอ','warn');
+  }else{
+    $('history').textContent='';
+    showMsg($('histMsg'),'กำลังค้นหาทะเบียน กรุณารอสักครู่…','warn');
+  }
+  $('history').setAttribute('aria-busy','true');
+  var started=performance.now();
+  var heartbeat=setInterval(function(){
+    if(seq!==historyQuerySeq)return;
+    var elapsed=Math.round((performance.now()-started)/1000);
+    if(elapsed>=5){
+      showMsg($('histMsg'),'กำลังอ่านทะเบียนจากระบบกลาง… '+elapsed+
+        ' วินาที (ยังทำงานอยู่) หากช้ามากสามารถปิดหน้าต่างแล้วกลับมาค้นหาใหม่','warn');
+    }
+  },2000);
+  // Reuse a pending request for the same query, but never show stale results
+  // from an older filter or earlier user session.
+  var pending=historyInFlight.get(key);
+  if(!pending){
+    pending=call('listMemoRequests',[state.staffCode,params]);
+    historyInFlight.set(key,pending);
+    pending.finally(function(){if(historyInFlight.get(key)===pending)historyInFlight.delete(key);});
+  }
+  try{
+    var result=await pending;
+    if(seq!==historyQuerySeq||!state.staffCode)return;
+    if(!result||!result.ok){
+      showMsg($('histMsg'),(result&&result.error&&result.error.message)||
+        'ค้นหาไม่สำเร็จ กรุณากดค้นหาอีกครั้ง','err');
+      return;
+    }
+    var rows=result.data&&Array.isArray(result.data.rows)?result.data.rows:[];
+    historyCache.set(key,{at:Date.now(),rows:rows});
+    renderHistory(rows);
+    showMsg($('histMsg'),'พบ '+Number(result.data.total||rows.length)+
+      ' รายการ · โหลดเสร็จใน '+((performance.now()-started)/1000).toFixed(1)+' วินาที','ok');
+  }catch(err){
+    if(seq===historyQuerySeq)showMsg($('histMsg'),
+      'ไม่สามารถเชื่อมต่อทะเบียนได้ กรุณากดค้นหาใหม่','err');
+  }finally{
+    clearInterval(heartbeat);
+    if(seq===historyQuerySeq)$('history').setAttribute('aria-busy','false');
+  }
 }
 
 var adaptiveResizePending=false;
@@ -1356,6 +1427,7 @@ async function deleteMemoByAdmin(m) {
     confirmed:true,returnNumber:wantsReturn,policyApprovalRef:policy,
     noExternalUseAttested:wantsReturn}]);
   if(!r||!r.ok){alert((r&&r.error&&r.error.message)||'ลบเลขไม่สำเร็จ');return;}
+  invalidateHistoryCache();
   await loadRegister();await refreshBootstrap();
 }
 function renderHistory(rows) {
@@ -1458,6 +1530,7 @@ async function submitRequest() {
   var btn = $('submitBtn');
   busy(btn, true, 'กำลังออกเลขทะเบียน…');
   hideMsg($('submitMsg'));
+  invalidateHistoryCache();
   var r = await call('requestMemoNumber', [payload]);
   busy(btn, false);
 
@@ -1567,6 +1640,7 @@ function doLogout() {
   $('loginCard').classList.remove('hidden');
   $('resultBox').classList.add('hidden');
   $('tokenBox').classList.add('hidden');
+  invalidateHistoryCache();
   $('history').textContent = '';registerRowsCache=[];$('registerRows').textContent='';
   hideMsg($('loginMsg'));
   clearAndFocusLogin();
@@ -1587,9 +1661,14 @@ $('loginForm').addEventListener('submit', function (event) {
   doLogin();
 });
 $('historyOpen').addEventListener('click',function(){
-  loadHistory();$('historyDialog').showModal();
+  $('historyDialog').showModal();
+  loadHistory();
 });
-$('historyClose').addEventListener('click',function(){$('historyDialog').close();});
+$('historyClose').addEventListener('click',function(){
+  ++historyQuerySeq;
+  $('history').setAttribute('aria-busy','false');
+  $('historyDialog').close();
+});
 $('adminOpen').addEventListener('click',function(){
   $('adminPass').value='';$('adminDialog').showModal();
 });
@@ -1638,6 +1717,7 @@ $('editSave').addEventListener('click',async function(){
   }]);
   if(!r || !r.ok){showMsg($('editMsg'),(r&&r.error&&r.error.message)||'ไม่สามารถแก้ไขได้','err');return;}
   $('editDialog').close();
+  invalidateHistoryCache();
   await loadRegister();await refreshBootstrap();
 });
 $('subject').addEventListener('keydown',function(e){
@@ -1647,8 +1727,16 @@ $('subject').addEventListener('keydown',function(e){
   }
 });
 $('submitBtn').addEventListener('click', submitRequest);
-$('searchBtn').addEventListener('click', loadHistory);
-$('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadHistory(); });
+$('searchBtn').addEventListener('click',function(){loadHistory(true);});
+$('q').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){clearTimeout(historySearchDebounceTimer);loadHistory(true);}
+});
+$('q').addEventListener('input',function(){
+  clearTimeout(historySearchDebounceTimer);
+  historySearchDebounceTimer=setTimeout(function(){
+    if($('historyDialog').open)loadHistory();
+  },450);
+});
 $('showCancelled').addEventListener('change', loadHistory);
 $('logoutBtn').addEventListener('click', doLogout);
 $('copyBtn').addEventListener('click', function () {
