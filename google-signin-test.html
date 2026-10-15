@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>ทดสอบ Google Sign-In • ทะเบียนเลขบันทึกข้อความ ท.3</title>
+<style>
+body{font-family:system-ui,"Sarabun",sans-serif;background:#edf4f1;color:#203933;margin:0;padding:16px}
+main{max-width:580px;margin:25px auto}.top{background:#2b8178;color:white;padding:20px;border-radius:14px}
+h1{font-size:1.25rem;margin:0}h2{font-size:1.04rem}
+section{background:white;border:1px solid #d5e4da;border-radius:14px;padding:22px;margin:13px 0;box-shadow:0 2px 7px #1232}
+p{line-height:1.75}.warning{background:#fff4db;padding:12px;border-radius:8px}
+#status{white-space:pre-wrap;background:#e9f4f0;border-radius:10px;padding:15px}
+#google-button{display:flex;justify-content:center;min-height:42px}
+a{color:#176b62}small{color:#65716e}
+</style><script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<body><main><div class="top"><h1>ทดสอบ Google Sign-In รายบุคคล</h1>
+<div>กลุ่มงานบริหารงานวิชาการ โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</div></div>
+<section><h2>ทดสอบการเชื่อมต่อ Google เท่านั้น</h2>
+<p class="warning">หน้านี้ทดสอบเฉพาะการทำงานของ Google Identity Services ในเบราว์เซอร์
+<b>ยังไม่ใช่การเข้าสู่ระบบทะเบียนจริง</b> และไม่อนุญาตให้ออกเลขหนังสือ ดูทะเบียน หรือแก้ไขข้อมูล</p>
+<div id="google-button"></div><p id="status" role="status" aria-live="polite">กำลังเตรียม Google Sign-In...</p>
+<small>ไม่แสดง ไม่บันทึก และไม่ส่ง Google ID Token ไปยังเซิร์ฟเวอร์ของโรงเรียนหรือ GitHub</small>
+</section>
+<section><h2>การทดสอบที่ยังต้องทำ</h2>
+<p>หลัง Google ส่งผลเข้าสู่เบราว์เซอร์แล้ว ต้องตรวจลายเซ็น ID Token และผูก Google Account ID
+(<code>sub</code>) กับ <code>USERS → PersonnelID</code> ใน School Core โดยผู้มีอำนาจอนุมัติ
+จากนั้นจึงเปิดการบันทึก Login Audit ฝั่งเซิร์ฟเวอร์และสิทธิ์การใช้งานจริง</p>
+<p><a href="./">กลับสู่ระบบทะเบียน Public รุ่น v0.5.10 (ใช้งานจริง)</a></p>
+</section></main>
+<script>
+(function(){
+const CLIENT_ID="141537624519-c60cq5nsih8gjqjamoa7j4titurvs9lh.apps.googleusercontent.com";
+const out=document.getElementById('status');
+let count=0;
+function init(){
+ if(!(window.google&&google.accounts&&google.accounts.id)){
+   if(++count<30){setTimeout(init,300);return}
+   out.textContent='ไม่สามารถโหลด Google Identity Services ได้ กรุณาตรวจเครือข่ายหรือรีเฟรชหน้า';return;
+ }
+ try{
+  google.accounts.id.initialize({client_id:CLIENT_ID,auto_select:false,
+   callback:function(response){
+    const received=!!(response&&typeof response.credential==='string'&&response.credential.length>100);
+    response=null;
+    out.textContent=received
+     ? 'ผ่าน: Google ส่ง Credential ถึงเบราว์เซอร์แล้ว\nยังไม่ได้ตรวจลายเซ็นหรือยืนยันสิทธิ์ School Core และยังไม่มี Login Audit ฝั่งเซิร์ฟเวอร์'
+     : 'ไม่ได้รับ Credential จาก Google — กรุณาตรวจการอนุญาตบัญชีใน Google Cloud';
+   }
+  });
+  google.accounts.id.renderButton(document.getElementById('google-button'),{theme:'outline',size:'large',text:'signin_with',width:290});
+  out.textContent='ปุ่ม Google พร้อมทดลองเข้าสู่ระบบ (Browser Test Only)';
+ }catch(err){out.textContent='ตั้งค่า Google Identity Services ไม่สำเร็จ กรุณาตรวจ Google Cloud OAuth Client';}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script></body></html>
