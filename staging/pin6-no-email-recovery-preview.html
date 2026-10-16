@@ -90,7 +90,7 @@ el('activateForm').addEventListener('submit',async e=>{
   const username=el('activateUser').value.trim(),invitationToken=el('inviteToken').value.trim(),
     initialPin=normalizePin(el('initialPin').value),newPin=normalizePin(el('activatePin').value),
     confirm=normalizePin(el('activateConfirm').value);
-  if(!userValid(username)||!/[0-9a-f]{64}/.test(invitationToken)||initialPin!=='123456'||!newPinValid(newPin,confirm)){
+  if(!userValid(username)||!/^[0-9a-f]{64}$/.test(invitationToken)||initialPin!=='123456'||!newPinValid(newPin,confirm)){
     status('ตรวจสอบ Username ลิงก์เปิดบัญชี และ PIN ใหม่ 6 หลัก');return;
   }
   if(!PIN_BACKEND_READY){status('STAGING ONLY — ยังไม่มีการเปิดบัญชีหรือสร้างรหัสกู้คืนจริง');clearSecrets();return;}
