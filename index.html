@@ -538,15 +538,15 @@
         <label for="staffCode">PIN 6 หลัก</label>
         <input type="password" id="staffCode" inputmode="numeric" pattern="[0-9]{6}"
                minlength="6" maxlength="6" autocomplete="current-password"
-               placeholder="กรอก PIN ส่วนตัว" enterkeyhint="go">
+               placeholder="_ _ _ _ _ _" aria-label="PIN 6 หลัก"
+               style="text-align:center;font-family:monospace;font-size:1.6rem;
+                      letter-spacing:.25rem" enterkeyhint="go">
         <button id="switchToAdmin" type="button" class="btn-secondary"
-                style="margin-top:10px">เข้าสู่ระบบสำหรับ Admin</button>
+                style="margin-top:10px">สำหรับผู้ดูแลระบบ</button>
       </div>
       <div id="adminLoginFields" class="hidden">
-        <label for="loginUsername">ชื่อผู้ใช้ Admin</label>
-        <input id="loginUsername" maxlength="20" autocomplete="username"
-               autocapitalize="off" spellcheck="false" placeholder="admin">
-        <label for="adminLoginCode">รหัส Admin</label>
+        <input id="loginUsername" type="hidden" value="admin">
+        <label for="adminLoginCode">รหัสผู้ดูแลระบบ</label>
         <input type="password" id="adminLoginCode" autocomplete="current-password"
                placeholder="กรอกรหัส Admin" enterkeyhint="go">
         <button id="switchToStaff" type="button" class="btn-secondary"
@@ -1326,7 +1326,7 @@ function changeLoginAccessMode(mode){
   closeLoginSuggestions();
   if(loginAccessMode==='admin'){
     $('loginUsername').value='admin';
-    $('loginUsername').focus({preventScroll:true});
+    $('adminLoginCode').focus({preventScroll:true});
   }else{
     $('adminLoginCode').value='';
     $('loginPersonnelSearch').focus({preventScroll:true});
@@ -1371,7 +1371,7 @@ async function doLogin() {
   var username=isAdmin?$('loginUsername').value.trim().toLowerCase():'';
   var personId=isAdmin?'':$('loginPersonnelId').value;
   if(isAdmin&&username!=='admin'){
-    showMsg($('loginMsg'),'กรุณากรอกชื่อผู้ใช้ admin','err');return;
+    showMsg($('loginMsg'),'ไม่สามารถเข้าสู่ระบบผู้ดูแลได้','err');return;
   }
   if(!isAdmin&&!personId){
     showMsg($('loginMsg'),'กรุณาเลือกชื่อจากรายชื่อก่อน','err');
