@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>T3 Academic Memo | PIN 6 หลัก (Staging)</title>
+<style>
+:root{font-family:"Sarabun",system-ui,Tahoma,sans-serif;color:#193b38;background:#edf5f1}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px}
+main{width:min(100%,480px);background:white;border:1px solid #d5e5dd;border-radius:18px;padding:clamp(18px,4vw,32px);box-shadow:0 8px 28px #19463612}
+h1{font-size:1.42rem;margin:4px 0 8px}p{line-height:1.6}.tag{font-size:.78rem;font-weight:700;color:#9b601a}
+.notice{padding:10px 12px;background:#fff4df;border-radius:8px;border-left:4px solid #c78f2a}
+label{display:block;font-weight:650;margin:16px 0 5px}
+input{width:100%;min-height:46px;padding:9px 12px;border-radius:9px;border:1px solid #a7c8bf;font:inherit}
+input:focus-visible,button:focus-visible{outline:3px solid #d7a343;outline-offset:2px}
+button{font:inherit;min-height:44px;padding:10px;border:0;border-radius:9px;cursor:pointer;background:#176a61;color:#fff;font-weight:700}
+button:disabled{opacity:.65;cursor:not-allowed}
+.actions{display:flex;gap:8px;margin-top:18px}.actions button:first-child{flex:1}
+.actions button+button{background:#e8f0ec;color:#23463f}
+.hint{font-size:.84rem;color:#5c7470}#status{margin-top:14px;min-height:25px;font-size:.92rem;line-height:1.5}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div class="tag">STAGING ONLY · ไม่เชื่อมระบบบุคลากรจริง</div>
+<h1>เข้าสู่ระบบบันทึกข้อความภายใน</h1>
+<p>โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</p>
+<p class="notice">หน้านี้เป็นต้นแบบการใช้ Username และ PIN 6 หลัก ยังไม่เปิดใช้งานจริงและไม่สามารถออกเลขหนังสือได้</p>
+<form id="loginForm" autocomplete="off" novalidate>
+<label for="username">ชื่อผู้ใช้ (Username)</label>
+<input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64" required placeholder="บัญชีที่โรงเรียนออกให้">
+<label for="pin">รหัส PIN ตัวเลข 6 หลัก</label>
+<input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}"
+       maxlength="6" autocomplete="off" required aria-describedby="pinHelp" placeholder="••••••">
+<div class="hint" id="pinHelp">ต้องมี 6 หลักพอดี · รหัสเริ่มต้นไม่ให้สิทธิ์ใช้งานจนกว่ายืนยันตัวบุคคล</div>
+<div class="actions"><button id="loginBtn" type="submit">เข้าสู่ระบบ</button><button type="button" id="togglePin" aria-pressed="false">แสดง PIN</button></div>
+</form>
+<form id="changeForm" hidden autocomplete="off" novalidate>
+<p>ยืนยันตัวบุคคลสำเร็จ แต่ต้องเปลี่ยน PIN ก่อนใช้งาน</p>
+<label for="newPin">ตั้ง PIN ใหม่ 6 หลัก</label>
+<input type="password" id="newPin" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password">
+<label for="confirmPin">ยืนยัน PIN ใหม่</label>
+<input type="password" id="confirmPin" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password">
+<div class="actions"><button type="submit">ยืนยัน PIN ใหม่</button><button type="button" id="cancelChange">ยกเลิก</button></div>
+</form>
+<div id="status" role="status" aria-live="polite"></div>
+<p class="hint">ระบบจริงยังใช้หน้าเดิมที่ได้รับอนุมัติ ไม่มีการเปลี่ยนสิทธิ์หรือข้อมูลบัญชีจากต้นแบบนี้</p>
+</main>
+<script src="./pin6-rules.js"></script>
+<script>
+'use strict';
+/* Isolated proposal. Never place API secrets or permanent PINs in client code. */
+const PIN_BACKEND_READY=false;
+const PIN_RPC_ENDPOINT='';
+let oneUseChallenge=null;
+const el=id=>document.getElementById(id);
+function tell(message){el('status').textContent=message;}
+function clearSensitive(){
+  el('pin').value='';el('newPin').value='';el('confirmPin').value='';
+}
+async function serverRpc(fn,payload){
+  if(!PIN_BACKEND_READY || !PIN_RPC_ENDPOINT)throw new Error('STAGING_ONLY');
+  const ctl=new AbortController();
+  const timeout=setTimeout(()=>ctl.abort(),15000);
+  try{
+    const res=await fetch(PIN_RPC_ENDPOINT,{
+      method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      credentials:'omit',cache:'no-store',signal:ctl.signal,
+      body:JSON.stringify({fn:fn,args:[payload]})
+    });
+    if(!res.ok)throw new Error('SERVER_UNAVAILABLE');
+    const data=await res.json();
+    if(typeof data.ok!=='boolean')throw new Error('INVALID_RESPONSE');
+    return data;
+  }finally{clearTimeout(timeout);}
+}
+el('togglePin').addEventListener('click',()=>{
+  const visible=el('pin').type==='text';
+  el('pin').type=visible?'password':'text';
+  el('togglePin').textContent=visible?'แสดง PIN':'ซ่อน PIN';
+  el('togglePin').setAttribute('aria-pressed',String(!visible));
+});
+el('loginForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const username=el('username').value.trim();
+  const pin=T3Pin6Rules.normalizePin(el('pin').value);
+  if(!T3Pin6Rules.validUsername(username)){tell('กรุณาตรวจสอบชื่อผู้ใช้ที่โรงเรียนกำหนด');clearSensitive();return;}
+  if(!T3Pin6Rules.validPin(pin)){tell('กรุณาระบุ PIN ตัวเลข 6 หลัก');clearSensitive();return;}
+  if(!PIN_BACKEND_READY){tell('STAGING_ONLY — ยังไม่เปิดระบบยืนยันตัวตน จึงไม่มีการส่งรหัสหรือเปิดข้อมูล');clearSensitive();return;}
+  el('loginBtn').disabled=true;
+  try{
+    const reply=await serverRpc('pinSignIn',{username,pin});
+    if(!reply.ok){tell('ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลหรือติดต่อผู้ดูแล');return;}
+    const d=reply.data||{};
+    if(d.state==='CHANGE_REQUIRED' && typeof d.challenge==='string'){
+      oneUseChallenge=d.challenge;el('loginForm').hidden=true;el('changeForm').hidden=false;
+      tell('กรุณาตั้งรหัสใหม่ก่อนเปิดสิทธิ์ใช้งาน');
+    }else if(d.state==='ACTIVATION_REQUIRED'){
+      tell('บัญชียังไม่ผ่านการยืนยันตัวบุคคล กรุณาติดต่อผู้ดูแล');
+    }else{
+      tell('ยังไม่ได้เชื่อมการเข้าสู่ระบบ PIN กับสิทธิ์ทะเบียนจริง');
+    }
+  }catch(error){tell('ระบบ PIN ยังไม่พร้อมใช้งาน กรุณาใช้หน้าเดิม');}
+  finally{el('loginBtn').disabled=false;clearSensitive();}
+});
+el('changeForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const pin=T3Pin6Rules.normalizePin(el('newPin').value);
+  const again=T3Pin6Rules.normalizePin(el('confirmPin').value);
+  if(!T3Pin6Rules.validNewPin(pin)){tell('PIN ใหม่ต้องมีตัวเลข 6 หลักและห้ามใช้รหัสที่เดาง่าย');clearSensitive();return;}
+  if(pin!==again){tell('PIN ที่ยืนยันไม่ตรงกัน');clearSensitive();return;}
+  if(!oneUseChallenge || !PIN_BACKEND_READY){tell('ยังไม่ได้เปิดการเปลี่ยนรหัสจริง');clearSensitive();return;}
+  try{
+    const r=await serverRpc('pinChangeInitial',{challenge:oneUseChallenge,newPin:pin});
+    tell(r.ok?'การตั้งรหัสสำเร็จในระบบทดสอบ กรุณาใช้หน้าเดิมจนกว่าจะอนุมัติ Release':'ไม่สามารถตั้งรหัสได้');
+  }catch(error){tell('ไม่สามารถเชื่อมต่อระบบเปลี่ยนรหัสได้');}
+  finally{oneUseChallenge=null;clearSensitive();}
+});
+el('cancelChange').addEventListener('click',()=>{oneUseChallenge=null;el('changeForm').hidden=true;el('loginForm').hidden=false;clearSensitive();tell('ยกเลิกแล้ว');});
+</script>
+</body>
+</html>
