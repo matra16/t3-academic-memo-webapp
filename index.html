@@ -541,12 +541,11 @@
                placeholder="_ _ _ _ _ _" aria-label="PIN 6 หลัก"
                style="text-align:center;font-family:monospace;font-size:1.6rem;
                       letter-spacing:.25rem" enterkeyhint="go">
-        <div id="v3ActivationControls" class="hidden" style="margin-top:12px">
-          <label for="v3ActivationCode">รหัสเปิดบัญชีเฉพาะตัว (ครั้งแรก)</label>
-          <input id="v3ActivationCode" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="วางรหัสที่ได้รับจากผู้ดูแล">
-        </div>
+        <input id="v3ActivationCode" type="hidden" autocomplete="off" value="">
         <div id="v3FirstChangeControls" class="hidden" style="margin-top:12px">
+          <div role="status" style="font-weight:700;margin-bottom:10px">
+            กรุณาตั้ง PIN ส่วนตัวใหม่ 6 หลัก และจำรหัสนี้ไว้สำหรับเข้าใช้งานครั้งต่อไป
+          </div>
           <label for="v3NextPin">ตั้ง PIN ใหม่</label>
           <input id="v3NextPin" type="password" inputmode="numeric" maxlength="6"
                  autocomplete="new-password" placeholder="_ _ _ _ _ _"
@@ -1375,8 +1374,9 @@ async function loadLoginStaffRoster(){
     var id=decodeURIComponent(match[1]),token=decodeURIComponent(match[2]);
     var person=loginStaffRoster.find(function(x){return x.id===id;});
     history.replaceState(null,'',location.pathname+location.search);
-    if(person){chooseLoginPerson(person);$('v3ActivationCode').value=token;
-      $('v3ActivationControls').classList.remove('hidden');
+    if(person){
+      chooseLoginPerson(person);
+      $('v3ActivationCode').value=token;
       $('staffCode').focus({preventScroll:true});
     }
   }
@@ -1455,17 +1455,18 @@ async function doLogin() {
   finally{loginInFlight=false;busy(btn,false);}
   if(seq!==loginSequence)return;
   if(!r || !r.ok){
+    var message=(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ';
     if(!isAdmin&&r&&r.error&&r.error.code==='INVITATION_REQUIRED'){
-      $('v3ActivationControls').classList.remove('hidden');
+      message='บัญชีนี้ยังไม่พร้อมตั้ง PIN ครั้งแรก กรุณาให้ผู้ดูแลเปิดสิทธิ์ให้';
     }
-    showMsg($('loginMsg'),(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ','err');
+    showMsg($('loginMsg'),message,'err');
     return;
   }
   if(!isAdmin&&r.data&&r.data.firstChangeRequired){
     v3PendingSetup={id:personId,token:r.data.setupToken};
     $('v3FirstChangeControls').classList.remove('hidden');
     $('v3NextPin').focus();
-    showMsg($('loginMsg'),'กรุณาตั้ง PIN ส่วนตัวใหม่','warn');
+    showMsg($('loginMsg'),'ตั้ง PIN ใหม่ 6 หลัก แล้วจดจำรหัสไว้สำหรับครั้งต่อไป','warn');
     return;
   }
   var sessionCredential=isAdmin?code:String((r.data&&r.data.sessionToken)||'');
@@ -1538,7 +1539,6 @@ $('v3ResetPin').addEventListener('click',async function(){
   var r=await call('pinSelfReset',[id,$('v3RecoveryCode').value.trim()]);
   if(!r||!r.ok){showMsg($('loginMsg'),r?.error?.message||'ไม่สามารถรีเซต PIN ได้','err');return;}
   $('v3ActivationCode').value=r.data.invitationCode;
-  $('v3ActivationControls').classList.remove('hidden');
   $('v3RecoveryControls').classList.add('hidden');
   $('staffCode').value='123456';$('staffCode').focus();
   showMsg($('loginMsg'),'กรุณากดเข้าสู่ระบบเพื่อเปลี่ยน PIN ใหม่','warn');
@@ -1962,7 +1962,7 @@ function doLogout() {
   $('v3AdminInviteBox').classList.add('hidden');
   $('v3RecoveryNotice').classList.add('hidden');
   $('v3FirstChangeControls').classList.add('hidden');
-  $('v3ActivationControls').classList.add('hidden');
+  $('v3ActivationCode').value='';
   $('v3RecoveryControls').classList.add('hidden');
   v3PendingSetup=null;
 }
