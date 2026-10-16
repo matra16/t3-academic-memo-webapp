@@ -28,7 +28,7 @@ button:disabled{opacity:.65;cursor:not-allowed}
 <div class="tag">STAGING ONLY · ไม่เชื่อมระบบบุคลากรจริง</div>
 <h1>เข้าสู่ระบบบันทึกข้อความภายใน</h1>
 <p>โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</p>
-<p class="notice">หน้านี้เป็นต้นแบบการใช้ Username และ PIN 6 หลัก ยังไม่เปิดใช้งานจริงและไม่สามารถออกเลขหนังสือได้</p>
+<p class="notice">ต้นแบบระบบเปิดบัญชีด้วยตนเอง: รับรหัสยืนยันทางอีเมลที่ลงทะเบียน → ตั้ง PIN ใหม่ → เข้าระบบ ไม่ต้องให้ผู้ดูแลอนุมัติทีละคน เมื่อข้อมูลตัวตนและสิทธิ์ในทะเบียนกลางได้รับรองแล้ว</p>
 <form id="loginForm" autocomplete="off" novalidate>
 <label for="username">ชื่อผู้ใช้ (Username)</label>
 <input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64" required placeholder="บัญชีที่โรงเรียนออกให้">
@@ -37,6 +37,25 @@ button:disabled{opacity:.65;cursor:not-allowed}
        maxlength="6" autocomplete="off" required aria-describedby="pinHelp" placeholder="••••••">
 <div class="hint" id="pinHelp">ต้องมี 6 หลักพอดี · รหัสเริ่มต้นไม่ให้สิทธิ์ใช้งานจนกว่ายืนยันตัวบุคคล</div>
 <div class="actions"><button id="loginBtn" type="submit">เข้าสู่ระบบ</button><button type="button" id="togglePin" aria-pressed="false">แสดง PIN</button></div>
+</form>
+<div class="actions"><button type="button" id="startActivationBtn">เปิดใช้งานบัญชีครั้งแรกด้วยตนเอง</button></div>
+<form id="activateStartForm" hidden autocomplete="off" novalidate>
+<h2>ขั้นที่ 1 · ขอรหัสเปิดใช้งาน</h2>
+<p class="hint">ระบบจะส่งรหัส 12 หลักไปยังอีเมลหลักที่ยืนยันไว้ในทะเบียนกลางเท่านั้น ไม่แสดงอีเมลหรือข้อมูลบุคลากรบนหน้านี้</p>
+<label for="activateUsername">ชื่อผู้ใช้จากทะเบียนกลาง</label>
+<input id="activateUsername" maxlength="64" autocapitalize="off" autocomplete="off" spellcheck="false" required>
+<p class="hint">ใช้รหัสเริ่มต้นของโรงเรียน 123456 เพื่อขอเปิดบัญชี ซึ่งยังไม่สามารถใช้เข้าสู่ระบบจริงได้</p>
+<div class="actions"><button type="submit" id="sendActivationBtn">รับรหัสยืนยัน</button><button type="button" id="backToLoginA">ย้อนกลับ</button></div>
+</form>
+<form id="activateCompleteForm" hidden autocomplete="off" novalidate>
+<h2>ขั้นที่ 2 · ตั้ง PIN ของตนเอง</h2>
+<label for="activationCode">รหัสยืนยันจากอีเมล (12 หลัก)</label>
+<input id="activationCode" type="text" inputmode="numeric" pattern="[0-9]{12}" maxlength="12" autocomplete="one-time-code" required>
+<label for="activationNewPin">ตั้ง PIN ใหม่ 6 หลัก</label>
+<input id="activationNewPin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<label for="activationConfirmPin">ยืนยัน PIN ใหม่</label>
+<input id="activationConfirmPin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<div class="actions"><button type="submit" id="activateAccountBtn">เปิดใช้บัญชีและตั้ง PIN</button><button type="button" id="backToLoginB">กลับหน้าเข้าสู่ระบบ</button></div>
 </form>
 <form id="changeForm" hidden autocomplete="off" novalidate>
 <p>ยืนยันตัวบุคคลสำเร็จ แต่ต้องเปลี่ยน PIN ก่อนใช้งาน</p>
@@ -49,7 +68,51 @@ button:disabled{opacity:.65;cursor:not-allowed}
 <div id="status" role="status" aria-live="polite"></div>
 <p class="hint">ระบบจริงยังใช้หน้าเดิมที่ได้รับอนุมัติ ไม่มีการเปลี่ยนสิทธิ์หรือข้อมูลบัญชีจากต้นแบบนี้</p>
 </main>
-<script src="./pin6-rules.js"></script>
+<script src="./pin6-rules.js">function showStage(view){
+  ['loginForm','activateStartForm','activateCompleteForm','changeForm'].forEach(id=>el(id).hidden=(id!==view));
+}
+el('startActivationBtn').addEventListener('click',()=>{
+  el('activateUsername').value=el('username').value.trim();
+  showStage('activateStartForm');
+  tell('การยืนยันตัวตนจะทำงานเมื่อ Backend ได้รับอนุมัติและเชื่อมต่อแล้ว');
+});
+el('backToLoginA').addEventListener('click',()=>{showStage('loginForm');tell('กลับสู่หน้าเข้าสู่ระบบแล้ว');});
+el('backToLoginB').addEventListener('click',()=>{showStage('loginForm');tell('กลับสู่หน้าเข้าสู่ระบบแล้ว');});
+let activationUsername='';
+el('activateStartForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const username=el('activateUsername').value.trim();
+  if(!T3Pin6Rules.validUsername(username)){tell('กรุณาระบุชื่อผู้ใช้จากทะเบียนกลาง');return;}
+  if(!PIN_BACKEND_READY){tell('STAGING_ONLY — ยังไม่ส่งอีเมลหรือเปิดบัญชีจริง');return;}
+  el('sendActivationBtn').disabled=true;
+  try{
+    const r=await serverRpc('pin6RequestActivation',{username,initialPin:'123456'});
+    if(!r.ok){tell('ไม่สามารถเริ่มเปิดบัญชีได้');return;}
+    activationUsername=username;
+    showStage('activateCompleteForm');
+    tell('หากบัญชีได้รับสิทธิ์ ระบบจะส่งรหัสเปิดใช้งานไปยังอีเมลที่ลงทะเบียนไว้');
+  }catch(e){tell('ยังไม่สามารถเชื่อมระบบยืนยันตัวตนได้');}
+  finally{el('sendActivationBtn').disabled=false;}
+});
+el('activateCompleteForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const activationCode=el('activationCode').value.trim();
+  const newPin=T3Pin6Rules.normalizePin(el('activationNewPin').value);
+  const confirm=T3Pin6Rules.normalizePin(el('activationConfirmPin').value);
+  if(!/^\\d{12}$/.test(activationCode)){tell('กรุณากรอกรหัสยืนยัน 12 หลัก');return;}
+  if(!T3Pin6Rules.validNewPin(newPin)||newPin!==confirm){tell('PIN ใหม่ต้องเป็นตัวเลข 6 หลัก ไม่เดาง่าย และตรงกันทั้งสองช่อง');return;}
+  if(!PIN_BACKEND_READY){tell('STAGING_ONLY — ไม่มีการบันทึก PIN จริง');return;}
+  el('activateAccountBtn').disabled=true;
+  try{
+    const r=await serverRpc('pin6CompleteActivation',{username:activationUsername,activationCode,newPin});
+    if(!r.ok){tell('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ โปรดขอรหัสใหม่');return;}
+    el('activationCode').value='';el('activationNewPin').value='';el('activationConfirmPin').value='';
+    showStage('loginForm');
+    tell('เปิดบัญชีสำเร็จ กรุณาเข้าสู่ระบบด้วย PIN ใหม่');
+  }catch(e){tell('ระบบเปิดบัญชียังไม่พร้อม');}
+  finally{el('activateAccountBtn').disabled=false;}
+});
+</script>
 <script>
 'use strict';
 /* Isolated proposal. Never place API secrets or permanent PINs in client code. */
@@ -92,14 +155,14 @@ el('loginForm').addEventListener('submit',async event=>{
   if(!PIN_BACKEND_READY){tell('STAGING_ONLY — ยังไม่เปิดระบบยืนยันตัวตน จึงไม่มีการส่งรหัสหรือเปิดข้อมูล');clearSensitive();return;}
   el('loginBtn').disabled=true;
   try{
-    const reply=await serverRpc('pinSignIn',{username,pin});
+    const reply=await serverRpc('pin6SignIn',{username,pin});
     if(!reply.ok){tell('ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลหรือติดต่อผู้ดูแล');return;}
     const d=reply.data||{};
     if(d.state==='CHANGE_REQUIRED' && typeof d.challenge==='string'){
       oneUseChallenge=d.challenge;el('loginForm').hidden=true;el('changeForm').hidden=false;
       tell('กรุณาตั้งรหัสใหม่ก่อนเปิดสิทธิ์ใช้งาน');
     }else if(d.state==='ACTIVATION_REQUIRED'){
-      tell('บัญชียังไม่ผ่านการยืนยันตัวบุคคล กรุณาติดต่อผู้ดูแล');
+      tell('บัญชียังไม่ได้เปิดใช้งาน เลือกเปิดใช้งานบัญชีครั้งแรกด้วยตนเองได้');
     }else{
       tell('ยังไม่ได้เชื่อมการเข้าสู่ระบบ PIN กับสิทธิ์ทะเบียนจริง');
     }
