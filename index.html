@@ -541,6 +541,31 @@
                placeholder="_ _ _ _ _ _" aria-label="PIN 6 หลัก"
                style="text-align:center;font-family:monospace;font-size:1.6rem;
                       letter-spacing:.25rem" enterkeyhint="go">
+        <div id="v3ActivationControls" class="hidden" style="margin-top:12px">
+          <label for="v3ActivationCode">รหัสเปิดบัญชีเฉพาะตัว (ครั้งแรก)</label>
+          <input id="v3ActivationCode" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="วางรหัสที่ได้รับจากผู้ดูแล">
+        </div>
+        <div id="v3FirstChangeControls" class="hidden" style="margin-top:12px">
+          <label for="v3NextPin">ตั้ง PIN ใหม่</label>
+          <input id="v3NextPin" type="password" inputmode="numeric" maxlength="6"
+                 autocomplete="new-password" placeholder="_ _ _ _ _ _"
+                 style="text-align:center;font-family:monospace;letter-spacing:.3rem">
+          <label for="v3RepeatPin">ยืนยัน PIN ใหม่</label>
+          <input id="v3RepeatPin" type="password" inputmode="numeric" maxlength="6"
+                 autocomplete="new-password" placeholder="_ _ _ _ _ _"
+                 style="text-align:center;font-family:monospace;letter-spacing:.3rem">
+          <button id="v3CompletePin" type="button" class="btn-primary"
+                  style="margin-top:10px">บันทึก PIN และเข้าใช้งาน</button>
+        </div>
+        <div id="v3RecoveryControls" class="hidden" style="margin-top:12px">
+          <label for="v3RecoveryCode">รหัสกู้คืนส่วนตัว</label>
+          <input id="v3RecoveryCode" type="text" autocomplete="off" spellcheck="false">
+          <button id="v3ResetPin" type="button" class="btn-secondary"
+                  style="margin-top:10px">รีเซต PIN</button>
+        </div>
+        <button id="v3ShowRecovery" type="button" class="btn-secondary"
+                style="margin-top:10px">ลืม PIN</button>
         <button id="switchToAdmin" type="button" class="btn-secondary"
                 style="margin-top:10px">สำหรับผู้ดูแลระบบ</button>
       </div>
@@ -548,7 +573,7 @@
         <input id="loginUsername" type="hidden" value="admin">
         <label for="adminLoginCode">รหัสผู้ดูแลระบบ</label>
         <input type="password" id="adminLoginCode" autocomplete="current-password"
-               placeholder="กรอกรหัส Admin" enterkeyhint="go">
+               placeholder="กรอกรหัสผู้ดูแลระบบ" enterkeyhint="go">
         <button id="switchToStaff" type="button" class="btn-secondary"
                 style="margin-top:10px">กลับไปเลือกชื่อครูและผู้บริหาร</button>
       </div>
@@ -559,6 +584,23 @@
 
   <!-- ============ MAIN ============ -->
   <section id="appBody" class="hidden">
+    <div id="v3AdminInviteBox" class="card hidden">
+      <h2>จัดการการเปิดใช้บัญชีครู</h2>
+      <label for="v3InvitePersonnel">เลือกครูหรือผู้บริหาร</label>
+      <select id="v3InvitePersonnel"></select>
+      <button type="button" id="v3GenerateInvite" class="btn-primary">สร้างลิงก์เปิดใช้บัญชี</button>
+      <input type="text" id="v3InviteLink" readonly placeholder="ลิงก์เปิดใช้จะปรากฏที่นี่">
+      <button type="button" id="v3CopyInvite" class="btn-secondary">คัดลอกลิงก์</button>
+      <button type="button" id="v3AdminReset" class="btn-secondary">รีเซตบัญชีที่เลือก</button>
+      <p class="hint">ส่งลิงก์ส่วนตัวให้เจ้าของบัญชีโดยตรง ไม่ส่งในกลุ่มรวม</p>
+    </div>
+    <div id="v3RecoveryNotice" class="card hidden">
+      <h2>บันทึกรหัสกู้คืนส่วนตัว</h2>
+      <p class="hint">เก็บรหัสนี้ไว้ในที่ปลอดภัยสำหรับกรณีลืม PIN</p>
+      <input id="v3RecoveryShown" type="text" readonly>
+      <button type="button" id="v3CopyRecovery" class="btn-secondary">คัดลอกรหัสกู้คืน</button>
+      <button type="button" id="v3CloseRecovery" class="btn-secondary">บันทึกแล้ว</button>
+    </div>
 
     <div class="card card-status hidden">
       <h2><span class="ico" aria-hidden="true">📊</span> สถานะระบบเลขหมาย</h2>
@@ -773,7 +815,9 @@ var CLIENT_TIMEOUT_MS = 20000;
    No secrets are embedded in site source; staff code stays runtime-only. */
 const GAS_RPC_ENDPOINT = 'https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSkbhCFZ_uJs4dil1jvANgb4bGoeYYpToRUcQ8UBj96HE_UuraVbC9tJLSte/exec';
 const CLIENT_RPC_ALLOWLIST = Object.freeze({
-  fastAuth:true,listLoginRoster:true,pinSignIn:true,getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
+  fastAuth:true,listLoginRoster:true,pinSignIn:true,pinCompleteFirstChange:true,
+  pinChangeOwn:true,pinSelfReset:true,pinAdminReset:true,v3AdminIssueInvitation:true,
+  getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
   cancelMemoRequest:true,adminAuthenticate:true,adminUpdateIssued:true,
   adminVoidIssued:true
 });
@@ -1236,6 +1280,13 @@ async function hydrateAfterLogin(code,seq) {
     return;
   }
   state.boot=r.data;
+  if(state.adminCode){
+    $('v3AdminInviteBox').classList.remove('hidden');
+    var sel=$('v3InvitePersonnel');sel.textContent='';
+    (r.data.personnel||[]).forEach(function(p){
+      var o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);
+    });
+  }else{$('v3AdminInviteBox').classList.add('hidden');}
   fillPersonnel(r.data.personnel);
   fillCategories(r.data.categories);
   renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
@@ -1318,6 +1369,17 @@ async function loadLoginStaffRoster(){
     seen.add(p.id);return true;
   }).map(function(p){return {id:String(p.id),name:String(p.name)};});
   $('loginRosterStatus').textContent='';
+  // URL fragment never leaves the browser in the initial page request.
+  var match=location.hash.match(/^#activate=([^\.]+)\.(.+)$/);
+  if(match){
+    var id=decodeURIComponent(match[1]),token=decodeURIComponent(match[2]);
+    var person=loginStaffRoster.find(function(x){return x.id===id;});
+    history.replaceState(null,'',location.pathname+location.search);
+    if(person){chooseLoginPerson(person);$('v3ActivationCode').value=token;
+      $('v3ActivationControls').classList.remove('hidden');
+      $('staffCode').focus({preventScroll:true});
+    }
+  }
 }
 function changeLoginAccessMode(mode){
   loginAccessMode=mode==='admin'?'admin':'staff';
@@ -1387,12 +1449,23 @@ async function doLogin() {
   var btn=$('loginBtn');
   busy(btn,true,'กำลังยืนยันสิทธิ์…');
   var r;
-  try{r=await call(isAdmin?'fastAuth':'pinSignIn',isAdmin?[code,'admin']:[personId,code]);}
+  try{r=await call(isAdmin?'fastAuth':'pinSignIn',
+    isAdmin?[code,'admin']:[personId,code,$('v3ActivationCode').value.trim()]);}
   catch(e){r={ok:false,error:{message:'ติดต่อระบบตรวจรหัสไม่ได้'}};}
   finally{loginInFlight=false;busy(btn,false);}
   if(seq!==loginSequence)return;
   if(!r || !r.ok){
+    if(!isAdmin&&r&&r.error&&r.error.code==='INVITATION_REQUIRED'){
+      $('v3ActivationControls').classList.remove('hidden');
+    }
     showMsg($('loginMsg'),(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ','err');
+    return;
+  }
+  if(!isAdmin&&r.data&&r.data.firstChangeRequired){
+    v3PendingSetup={id:personId,token:r.data.setupToken};
+    $('v3FirstChangeControls').classList.remove('hidden');
+    $('v3NextPin').focus();
+    showMsg($('loginMsg'),'กรุณาตั้ง PIN ส่วนตัวใหม่','warn');
     return;
   }
   var sessionCredential=isAdmin?code:String((r.data&&r.data.sessionToken)||'');
@@ -1422,6 +1495,78 @@ async function doLogin() {
   setText($('loginPerf'),'เข้าสู่ระบบเรียบร้อย · กำลังเตรียมรายชื่อ');
   hydrateAfterLogin(sessionCredential,seq);
 }
+
+
+/* Private activation and account recovery. */
+var v3PendingSetup=null;
+function v3CompleteStaffSession(data){
+  if(!data || !data.sessionToken)return;
+  state.staffCode=String(data.sessionToken);state.adminCode='';
+  state.boot=data;document.body.classList.remove('admin-active');
+  $('adminLock').classList.add('hidden');
+  $('staffCode').value='';$('v3ActivationCode').value='';
+  $('v3NextPin').value='';$('v3RepeatPin').value='';
+  $('loginCard').classList.add('hidden');
+  $('appBody').classList.remove('hidden');
+  $('topActions').classList.remove('hidden');
+  $('v3FirstChangeControls').classList.add('hidden');
+  hideMsg($('loginMsg'));v3PendingSetup=null;
+  fillCategories(data.categories||[]);
+  renderAccount(data);setupCurrentDate();
+  hydrateAfterLogin(state.staffCode,++loginSequence);
+  if(data.recoveryCode){
+    $('v3RecoveryShown').value=String(data.recoveryCode);
+    $('v3RecoveryNotice').classList.remove('hidden');
+  }
+}
+$('v3CompletePin').addEventListener('click',async function(){
+  if(!v3PendingSetup)return;
+  var pin=$('v3NextPin').value,repeat=$('v3RepeatPin').value;
+  if(!/^[0-9]{6}$/.test(pin)||pin!==repeat||pin==='123456'){
+    showMsg($('loginMsg'),'PIN ใหม่ต้องมี 6 หลัก ตรงกัน และไม่ใช่รหัสเริ่มต้น','err');return;
+  }
+  var r=await call('pinCompleteFirstChange',[v3PendingSetup.id,v3PendingSetup.token,pin]);
+  if(!r||!r.ok){showMsg($('loginMsg'),r?.error?.message||'ไม่สามารถบันทึก PIN ได้','err');return;}
+  v3CompleteStaffSession(r.data);
+});
+$('v3ShowRecovery').addEventListener('click',function(){
+  $('v3RecoveryControls').classList.toggle('hidden');
+});
+$('v3ResetPin').addEventListener('click',async function(){
+  var id=$('loginPersonnelId').value;
+  if(!id){showMsg($('loginMsg'),'กรุณาเลือกชื่อก่อน','err');return;}
+  var r=await call('pinSelfReset',[id,$('v3RecoveryCode').value.trim()]);
+  if(!r||!r.ok){showMsg($('loginMsg'),r?.error?.message||'ไม่สามารถรีเซต PIN ได้','err');return;}
+  $('v3ActivationCode').value=r.data.invitationCode;
+  $('v3ActivationControls').classList.remove('hidden');
+  $('v3RecoveryControls').classList.add('hidden');
+  $('staffCode').value='123456';$('staffCode').focus();
+  showMsg($('loginMsg'),'กรุณากดเข้าสู่ระบบเพื่อเปลี่ยน PIN ใหม่','warn');
+});
+$('v3GenerateInvite').addEventListener('click',async function(){
+  if(!state.adminCode)return;
+  var r=await call('v3AdminIssueInvitation',[state.adminCode,$('v3InvitePersonnel').value]);
+  if(!r||!r.ok){alert(r?.error?.message||'ไม่สามารถสร้างลิงก์ได้');return;}
+  $('v3InviteLink').value=r.data.activationLink;
+});
+$('v3AdminReset').addEventListener('click',async function(){
+  if(!state.adminCode)return;
+  if(!confirm('รีเซตบัญชีที่เลือกและยกเลิก Session เดิม?'))return;
+  var r=await call('pinAdminReset',[state.adminCode,$('v3InvitePersonnel').value]);
+  if(!r||!r.ok){alert(r?.error?.message||'ไม่สามารถรีเซตบัญชีได้');return;}
+  $('v3InviteLink').value='https://matra16.github.io/t3-academic-memo-webapp/#activate='+
+     encodeURIComponent($('v3InvitePersonnel').value)+'.'+encodeURIComponent(r.data.invitationCode);
+});
+$('v3CopyInvite').addEventListener('click',function(){
+  if($('v3InviteLink').value)navigator.clipboard.writeText($('v3InviteLink').value);
+});
+$('v3CopyRecovery').addEventListener('click',function(){
+  navigator.clipboard.writeText($('v3RecoveryShown').value);
+});
+$('v3CloseRecovery').addEventListener('click',function(){
+  $('v3RecoveryShown').value='';
+  $('v3RecoveryNotice').classList.add('hidden');
+});
 
 function ensureYearFilters(){
   var sel=$('filterYear');if(sel.options.length>1)return;
@@ -1814,6 +1959,12 @@ function doLogout() {
   hideMsg($('loginMsg'));
   clearAndFocusLogin();
   $('personnelSearch').value='';
+  $('v3AdminInviteBox').classList.add('hidden');
+  $('v3RecoveryNotice').classList.add('hidden');
+  $('v3FirstChangeControls').classList.add('hidden');
+  $('v3ActivationControls').classList.add('hidden');
+  $('v3RecoveryControls').classList.add('hidden');
+  v3PendingSetup=null;
 }
 
 /* ================= events ================= */
