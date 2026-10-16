@@ -587,7 +587,10 @@
       <h2>จัดการการเปิดใช้บัญชีครู</h2>
       <label for="v3InvitePersonnel">เลือกครูหรือผู้บริหาร</label>
       <select id="v3InvitePersonnel"></select>
-      <button type="button" id="v3GenerateInvite" class="btn-primary">สร้างลิงก์เปิดใช้บัญชี</button>
+      <button type="button" id="v3BulkPrepare" class="btn-primary">เตรียมลิงก์เปิดบัญชีครั้งแรกสำหรับครูที่ยังไม่มี PIN</button>
+      <p id="v3BulkStatus" class="hint" aria-live="polite"></p>
+      <div id="v3BulkLinks" class="hidden"></div>
+      <button type="button" id="v3GenerateInvite" class="btn-primary">สร้างลิงก์เฉพาะราย</button>
       <input type="text" id="v3InviteLink" readonly placeholder="ลิงก์เปิดใช้จะปรากฏที่นี่">
       <button type="button" id="v3CopyInvite" class="btn-secondary">คัดลอกลิงก์</button>
       <button type="button" id="v3AdminReset" class="btn-secondary">รีเซตบัญชีที่เลือก</button>
@@ -814,7 +817,7 @@ var CLIENT_TIMEOUT_MS = 20000;
    No secrets are embedded in site source; staff code stays runtime-only. */
 const GAS_RPC_ENDPOINT = 'https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSkbhCFZ_uJs4dil1jvANgb4bGoeYYpToRUcQ8UBj96HE_UuraVbC9tJLSte/exec';
 const CLIENT_RPC_ALLOWLIST = Object.freeze({
-  fastAuth:true,listLoginRoster:true,pinSignIn:true,pinCompleteFirstChange:true,
+  fastAuth:true,listLoginRoster:true,pinSignIn:true,pinCompleteFirstChange:true,v3AdminPrepareMissingInvites:true,
   pinChangeOwn:true,pinSelfReset:true,pinAdminReset:true,v3AdminIssueInvitation:true,
   getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
   cancelMemoRequest:true,adminAuthenticate:true,adminUpdateIssued:true,
@@ -1595,6 +1598,39 @@ $('v3ResetPin').addEventListener('click',async function(){
   $('staffCode').value='123456';$('staffCode').focus();
   showMsg($('loginMsg'),'กรุณากดเข้าสู่ระบบเพื่อเปลี่ยน PIN ใหม่','warn');
 });
+/* Admin-only, one click. One-use private links must be sent individually. */
+$('v3BulkPrepare').addEventListener('click',async function(){
+  if(!state.adminCode)return;
+  if(!confirm('เตรียมลิงก์ส่วนตัวให้ครูที่ยังไม่มี PIN ใช่หรือไม่?'))return;
+  var button=this;
+  button.disabled=true;
+  $('v3BulkStatus').textContent='กำลังเตรียมลิงก์สำหรับบัญชีที่ยังไม่มี PIN…';
+  try{
+    var result=await call('v3AdminPrepareMissingInvites',[state.adminCode]);
+    if(!result||!result.ok)throw Error(result?.error?.message||'ไม่สามารถเตรียมบัญชีได้');
+    var data=result.data||{},rows=data.people||[];
+    $('v3BulkStatus').textContent='พร้อมส่งลิงก์ส่วนตัว '+rows.length+' รายการ จากผู้มีสิทธิ์ '+
+       data.eligible+' คน (มีบัญชีอยู่แล้ว '+data.alreadyKnown+' คน)';
+    var holder=$('v3BulkLinks');holder.textContent='';
+    rows.forEach(function(person){
+      var line=document.createElement('div');line.className='row';
+      var label=document.createElement('span');label.textContent=person.name;
+      var copy=document.createElement('button');copy.type='button';
+      copy.className='btn-secondary';copy.textContent='คัดลอกลิงก์';
+      copy.addEventListener('click',async function(){
+        try{
+          await navigator.clipboard.writeText(person.url);
+          $('v3BulkStatus').textContent='คัดลอกลิงก์ของ '+person.name+
+             ' แล้ว กรุณาส่งทาง LINE ส่วนตัวให้เจ้าของบัญชี';
+        }catch(err){$('v3BulkStatus').textContent='คัดลอกไม่สำเร็จ กรุณาลองอีกครั้ง';}
+      });
+      line.appendChild(label);line.appendChild(copy);holder.appendChild(line);
+    });
+    holder.classList.toggle('hidden',!rows.length);
+  }catch(err){$('v3BulkStatus').textContent=err.message||'เกิดข้อผิดพลาด';}
+  finally{button.disabled=false;}
+});
+
 $('v3GenerateInvite').addEventListener('click',async function(){
   if(!state.adminCode)return;
   var r=await call('v3AdminIssueInvitation',[state.adminCode,$('v3InvitePersonnel').value]);
