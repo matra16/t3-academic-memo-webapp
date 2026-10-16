@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>T3 Academic Memo — PIN6 ไม่ใช้อีเมล (Staging)</title>
+<style>
+:root{font-family:Tahoma,system-ui,sans-serif;color:#183f3d;background:#f0f6f4}*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:15px}
+main{width:min(100%,520px);background:#fff;border:1px solid #c4ddd3;border-radius:18px;padding:24px;box-shadow:0 12px 25px #153f2c16}
+h1{font-size:1.42rem;margin:0}h2{font-size:1.11rem;margin:5px 0}p{line-height:1.6}
+label{display:block;margin:13px 0 5px;font-weight:650}input{width:100%;font:inherit;padding:10px;min-height:44px;border-radius:9px;border:1px solid #a8ccc3}
+button{font:inherit;border-radius:9px;border:0;padding:10px 13px;min-height:43px;cursor:pointer;background:#176b5d;color:white;font-weight:600}
+button:focus-visible,input:focus-visible{outline:3px solid #d6a24d}
+.secondary{background:#e7f0ed;color:#1a5148}.buttons{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.warning{padding:12px;background:#fff3df;border-left:4px solid #bd8d34}
+.note{font-size:.84rem;color:#506762}#status{min-height:40px;font-size:.92rem;line-height:1.5}
+pre{white-space:pre-wrap;word-break:break-word;padding:12px;border-radius:8px;background:#edf5f1;line-height:1.8;font-size:1rem}
+[hidden]{display:none!important}
+</style></head><body><main>
+<p class="note"><strong>STAGING ONLY — ไม่ได้เชื่อมบัญชีหรือข้อมูลโรงเรียนจริง</strong></p>
+<h1>ระบบเลขบันทึกข้อความภายใน</h1><p>โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</p>
+<p class="warning">ต้นแบบการเข้าสู่ระบบและรีเซต PIN ด้วยรหัสกู้คืน ไม่ใช้อีเมล รีเซตเองสูงสุด 10 ครั้ง แล้วครั้งที่ 11 ให้ Admin</p>
+<div class="buttons"><button class="secondary" type="button" id="loginTab">เข้าสู่ระบบ</button>
+<button class="secondary" type="button" id="activateTab">เปิดบัญชีครั้งแรก</button>
+<button class="secondary" type="button" id="forgotTab">ลืม PIN</button></div>
+<form id="loginForm" novalidate autocomplete="off">
+<h2>เข้าสู่ระบบตามปกติ</h2>
+<label for="loginUser">Username</label><input id="loginUser" maxlength="64" autocomplete="username" required>
+<label for="loginPin">PIN ส่วนตัว 6 หลัก</label><input id="loginPin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" required>
+<div class="buttons"><button type="submit">เข้าสู่ระบบ</button></div>
+</form>
+<form id="activateForm" hidden novalidate autocomplete="off">
+<h2>เปิดบัญชีครั้งแรก</h2>
+<p class="note">กดลิงก์หรือสแกน QR เฉพาะบุคคลจากโรงเรียน เพื่อรับสิทธิ์เปิดบัญชีครั้งแรก</p>
+<label for="activateUser">Username</label><input id="activateUser" maxlength="64" autocomplete="off" required>
+<label for="inviteToken">รหัสจากลิงก์ / QR ส่วนตัว</label><input id="inviteToken" type="password" maxlength="64" autocomplete="off" required>
+<label for="initialPin">PIN เริ่มต้น</label><input id="initialPin" type="password" inputmode="numeric" maxlength="6" placeholder="123456" required>
+<label for="activatePin">ตั้ง PIN ใหม่ 6 หลัก</label><input id="activatePin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<label for="activateConfirm">ยืนยัน PIN ใหม่</label><input id="activateConfirm" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<div class="buttons"><button type="submit">เปิดบัญชีและรับรหัสกู้คืน</button></div>
+</form>
+<form id="forgotForm" hidden novalidate autocomplete="off">
+<h2>ลืม PIN — รีเซตด้วยตนเอง 10 ครั้ง</h2>
+<p class="note">ยืนยันด้วยรหัสกู้คืนส่วนตัวก่อนใช้ PIN ชั่วคราว 123456 (ใช้ได้เฉพาะหน้าเปลี่ยน PIN ไม่ใช่การเข้าสู่ระบบ)</p>
+<label for="recoverUser">Username</label><input id="recoverUser" maxlength="64" autocomplete="username" required>
+<label for="recoveryCode">รหัสกู้คืนส่วนตัวที่ยังไม่ได้ใช้</label>
+<input id="recoveryCode" type="password" maxlength="35" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" required>
+<div class="buttons"><button type="submit">ยืนยันและรีเซตเป็น 123456</button></div>
+</form>
+<form id="tempChangeForm" hidden novalidate autocomplete="off">
+<h2>ตั้ง PIN ใหม่ — ต้องทำก่อนใช้งาน</h2>
+<p class="warning">ระบบยอมรับ PIN ชั่วคราว 123456 เฉพาะขั้นเปลี่ยน PIN ที่ได้รับการยืนยันแล้วเท่านั้น</p>
+<label for="tempInitial">PIN ชั่วคราว</label><input id="tempInitial" type="password" inputmode="numeric" maxlength="6" placeholder="123456" required>
+<label for="tempNewPin">ตั้ง PIN ใหม่ 6 หลัก</label><input id="tempNewPin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<label for="tempConfirm">ยืนยัน PIN ใหม่</label><input id="tempConfirm" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" required>
+<div class="buttons"><button type="submit">บันทึก PIN ใหม่</button></div>
+</form>
+<section id="recoveryCodesPanel" hidden><h2>เก็บรหัสกู้คืนไว้ส่วนตัว</h2>
+<p class="warning">แสดงเพียงครั้งเดียว ห้ามส่งใน LINE กลุ่ม ไม่ควรเก็บในคอมพิวเตอร์สาธารณะ รหัสแต่ละชุดใช้ได้ครั้งเดียว</p>
+<pre id="codesOutput"></pre><div class="buttons"><button type="button" id="copyRecovery">คัดลอกรหัสกู้คืน</button>
+<button class="secondary" type="button" id="savedCodes">บันทึกแล้ว กลับหน้าเข้าสู่ระบบ</button></div></section>
+<div id="status" role="status" aria-live="polite"></div><p class="note">ถ้าทำรหัสกู้คืนทั้งหมดหาย จะต้องมีการยืนยันตัวตนด้วยวิธีสำรองที่โรงเรียนรับรอง ไม่สามารถรีเซตด้วย Username หรือ PIN 123456 เพียงอย่างเดียว</p>
+</main><script src="./pin6-rules.js"></script><script>
+'use strict';
+const PIN_BACKEND_READY=false;
+const PIN_RPC_ENDPOINT='';
+let tempResetTicket=null,tempResetUser='';
+const el=id=>document.getElementById(id);
+let visibleRecoveryCodes=null;
+function status(message){el('status').textContent=message;}
+function show(view){for(const id of ['loginForm','activateForm','forgotForm','tempChangeForm','recoveryCodesPanel'])el(id).hidden=id!==view;status('');}
+function normalizePin(s){return T3Pin6Rules.normalizePin(s);}
+function newPinValid(a,b){return a===b && T3Pin6Rules.validNewPin(a);}
+function userValid(s){return T3Pin6Rules.validUsername(s);}
+function clearSecrets(){for(const id of ['loginPin','inviteToken','initialPin','activatePin','activateConfirm','recoveryCode','tempInitial','tempNewPin','tempConfirm'])el(id).value='';}
+async function rpc(fn,payload){
+  if(!PIN_BACKEND_READY || !PIN_RPC_ENDPOINT)throw new Error('STAGING_ONLY');
+  const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
+  try{
+    const response=await fetch(PIN_RPC_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      credentials:'omit',cache:'no-store',signal:abort.signal,body:JSON.stringify({fn,args:[payload]})});
+    if(!response.ok)throw Error('RPC_FAILED');
+    return await response.json();
+  }finally{clearTimeout(timer);}
+}
+el('loginTab').addEventListener('click',()=>{clearSecrets();show('loginForm');});
+el('activateTab').addEventListener('click',()=>{clearSecrets();show('activateForm');});
+el('forgotTab').addEventListener('click',()=>{clearSecrets();show('forgotForm');});
+el('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const username=el('loginUser').value.trim(),pin=normalizePin(el('loginPin').value);
+  if(!userValid(username)||!T3Pin6Rules.validPin(pin)){status('โปรดกรอก Username และ PIN 6 หลักให้ถูกต้อง');return;}
+  if(!PIN_BACKEND_READY){status('STAGING ONLY — ยังไม่ได้เปิดเข้าสู่ระบบจริง');clearSecrets();return;}
+  try{const r=await rpc('pin6SignIn',{username,pin});status(r.ok?'ยืนยัน PIN สำเร็จในระบบทดสอบ (ยังไม่เชื่อมสิทธิ์ทะเบียน)':'Username หรือ PIN ไม่ถูกต้อง');}
+  catch(e){status('ระบบยังไม่พร้อมใช้งาน');}finally{clearSecrets();}
+});
+el('activateForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const username=el('activateUser').value.trim(),invitationToken=el('inviteToken').value.trim(),
+    initialPin=normalizePin(el('initialPin').value),newPin=normalizePin(el('activatePin').value),
+    confirm=normalizePin(el('activateConfirm').value);
+  if(!userValid(username)||!/^[0-9a-f]{64}$/.test(invitationToken)||initialPin!=='123456'||!newPinValid(newPin,confirm)){
+    status('ตรวจสอบ Username ลิงก์เปิดบัญชี และ PIN ใหม่ 6 หลัก');return;
+  }
+  if(!PIN_BACKEND_READY){status('STAGING ONLY — ยังไม่มีการเปิดบัญชีหรือสร้างรหัสกู้คืนจริง');clearSecrets();return;}
+  try{
+    const r=await rpc('pin6CompleteActivation',{username,invitationToken,initialPin,newPin});
+    if(r.ok && Array.isArray(r.recoveryCodes) && r.recoveryCodes.length===10){
+      visibleRecoveryCodes=r.recoveryCodes;
+      el('codesOutput').textContent=visibleRecoveryCodes.join('\n');
+      show('recoveryCodesPanel');
+      status('เปิดบัญชีแล้ว โปรดบันทึกรหัสกู้คืน ก่อนออกจากหน้านี้');
+    }else status('เปิดบัญชีไม่สำเร็จ โปรดตรวจสอบลิงก์เฉพาะบุคคล');
+  }catch(e){status('ระบบเปิดบัญชียังไม่พร้อม');}finally{clearSecrets();}
+});
+el('forgotForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const username=el('recoverUser').value.trim(),recoveryCode=el('recoveryCode').value.trim();
+  if(!userValid(username)||!/^([0-9A-Fa-f]{4}-?){5}[0-9A-Fa-f]{4}$/.test(recoveryCode)){
+    status('กรุณาระบุ Username และรหัสกู้คืนที่ยังไม่ได้ใช้');return;
+  }
+  if(!PIN_BACKEND_READY){status('STAGING ONLY — ยังไม่รีเซต PIN จริง');clearSecrets();return;}
+  try{
+    const r=await rpc('pin6SelfResetToTemporary',{username,recoveryCode});
+    if(r.ok && typeof r.resetTicket==='string'){
+      tempResetUser=username;tempResetTicket=r.resetTicket;
+      show('tempChangeForm');
+      status('ตรวจสอบตัวตนแล้ว ใช้ PIN ชั่วคราว 123456 เพื่อตั้ง PIN ใหม่ · รีเซตเหลือ '+r.remaining+' ครั้ง');
+    }else if(r.error==='ADMIN_REQUIRED'){
+      status('คุณใช้สิทธิ์รีเซตเองครบ 10 ครั้งแล้ว กรุณาติดต่อผู้ดูแลเพื่อยืนยันตัวตนขั้นสุดท้าย');
+    }else status('ไม่สามารถรีเซตได้ กรุณาตรวจสอบรหัสกู้คืน');
+  }catch(e){status('ระบบกู้คืนยังไม่พร้อม');}
+  finally{clearSecrets();}
+});
+el('tempChangeForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const initialPin=normalizePin(el('tempInitial').value),
+    newPin=normalizePin(el('tempNewPin').value),
+    confirm=normalizePin(el('tempConfirm').value);
+  if(initialPin!=='123456'||!newPinValid(newPin,confirm)){
+    status('PIN ชั่วคราวไม่ถูกต้อง หรือ PIN ใหม่ไม่ปลอดภัย/ไม่ตรงกัน');return;
+  }
+  if(!tempResetTicket||!PIN_BACKEND_READY){status('STAGING ONLY — ยังไม่ได้ตั้ง PIN ใหม่จริง');clearSecrets();return;}
+  try{
+    const r=await rpc('pin6CompleteTemporaryReset',{
+      username:tempResetUser,resetTicket:tempResetTicket,initialPin,newPin});
+    if(r.ok){
+      tempResetUser='';tempResetTicket=null;show('loginForm');
+      status('ตั้ง PIN ใหม่สำเร็จ · เหลือสิทธิ์รีเซตด้วยตนเอง '+r.remaining+' ครั้ง');
+    }else status('ขั้นตอนหมดอายุหรือข้อมูลไม่ถูกต้อง โปรดเริ่มการยืนยันใหม่');
+  }catch(e){status('ระบบตั้ง PIN ยังไม่พร้อม');}
+  finally{clearSecrets();}
+});
+el('copyRecovery').addEventListener('click',async()=>{
+  if(!visibleRecoveryCodes)return;
+  try{await navigator.clipboard.writeText(visibleRecoveryCodes.join('\n'));status('คัดลอกแล้ว โปรดเก็บในที่ปลอดภัยส่วนตัว');}
+  catch(e){status('กรุณาจดบันทึกรหัสจากหน้าจอ');}
+});
+el('savedCodes').addEventListener('click',()=>{
+  visibleRecoveryCodes=null;el('codesOutput').textContent='';show('loginForm');
+});
+(function readInvitationFragment(){
+  const fragment=window.location.hash.slice(1);
+  if(!fragment)return;
+  const query=new URLSearchParams(fragment);
+  const username=query.get('user')||'',token=query.get('invite')||'';
+  window.history.replaceState(null,'',window.location.pathname+window.location.search);
+  if(userValid(username)&&/^[0-9a-f]{64}$/.test(token)){
+    el('activateUser').value=username;el('inviteToken').value=token;show('activateForm');
+  }
+})();
+</script></body></html>
