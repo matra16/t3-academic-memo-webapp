@@ -518,21 +518,40 @@
       <div class="big" aria-hidden="true"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none"/></svg></div>
       <h2 style="justify-content:center;margin-top:6px">ผู้บริหารและครู โรงเรียนเทศบาล ๓ (วัดท่ามะปราง)</h2>
       <p class="hint" style="max-width:380px;margin:6px auto 0">
-        กรุณากรอกรหัสที่โรงเรียนกำหนด เพื่อใช้งานทะเบียนบันทึกข้อความภายใน
-        และตรวจสอบชื่อผู้ขอหนังสือให้ถูกต้องก่อนส่ง
+        เลือกชื่อแล้วกรอก PIN ส่วนตัวเพื่อเข้าสู่ระบบทะเบียนบันทึกข้อความ
       </p>
     </div>
     <form id="loginForm" autocomplete="off" novalidate>
-      <label for="loginUsername">ชื่อผู้ใช้ (Admin พิมพ์ admin)</label>
-      <input id="loginUsername" name="academic-memo-login-user" maxlength="20"
-             placeholder="admin หรือเว้นว่างสำหรับครู" autocomplete="username"
-             spellcheck="false" autocapitalize="off">
-      <label for="staffCode">รหัสเข้าใช้งาน</label>
-      <input type="password" id="staffCode" name="academic-memo-staff-access"
-             autocomplete="new-password" value="" autofocus
-             inputmode="text" enterkeyhint="go" autocapitalize="off"
-             spellcheck="false" aria-describedby="staffCodeHint">
-      <div class="hint" id="staffCodeHint">กด Enter หรือคลิกเข้าสู่ระบบ</div>
+      <div id="staffLoginFields">
+        <label for="loginPersonnelSearch">ชื่อผู้บริหารหรือครู</label>
+        <div id="loginPersonnelLookup" class="name-lookup">
+          <input id="loginPersonnelSearch" type="search" role="combobox"
+                 aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="loginPersonnelChoices" autocomplete="off"
+                 placeholder="พิมพ์ชื่อหรือนามสกุล" enterkeyhint="next"
+                 spellcheck="false">
+          <input id="loginPersonnelId" type="hidden">
+          <div id="loginPersonnelChoices" class="name-results hidden"
+               role="listbox" aria-label="รายชื่อครูและผู้บริหาร"></div>
+        </div>
+        <p id="loginRosterStatus" class="hint" aria-live="polite"></p>
+        <label for="staffCode">PIN 6 หลัก</label>
+        <input type="password" id="staffCode" inputmode="numeric" pattern="[0-9]{6}"
+               minlength="6" maxlength="6" autocomplete="current-password"
+               placeholder="กรอก PIN ส่วนตัว" enterkeyhint="go">
+        <button id="switchToAdmin" type="button" class="btn-secondary"
+                style="margin-top:10px">เข้าสู่ระบบสำหรับ Admin</button>
+      </div>
+      <div id="adminLoginFields" class="hidden">
+        <label for="loginUsername">ชื่อผู้ใช้ Admin</label>
+        <input id="loginUsername" maxlength="20" autocomplete="username"
+               autocapitalize="off" spellcheck="false" placeholder="admin">
+        <label for="adminLoginCode">รหัส Admin</label>
+        <input type="password" id="adminLoginCode" autocomplete="current-password"
+               placeholder="กรอกรหัส Admin" enterkeyhint="go">
+        <button id="switchToStaff" type="button" class="btn-secondary"
+                style="margin-top:10px">กลับไปเลือกชื่อครูและผู้บริหาร</button>
+      </div>
       <button type="submit" class="btn-primary" id="loginBtn" style="margin-top:14px">🔓 เข้าสู่ระบบ</button>
       <div class="status" id="loginMsg" role="alert" aria-live="assertive"></div>
     </form>
@@ -754,7 +773,7 @@ var CLIENT_TIMEOUT_MS = 20000;
    No secrets are embedded in site source; staff code stays runtime-only. */
 const GAS_RPC_ENDPOINT = 'https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSkbhCFZ_uJs4dil1jvANgb4bGoeYYpToRUcQ8UBj96HE_UuraVbC9tJLSte/exec';
 const CLIENT_RPC_ALLOWLIST = Object.freeze({
-  fastAuth:true,getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
+  fastAuth:true,listLoginRoster:true,pinSignIn:true,getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
   cancelMemoRequest:true,adminAuthenticate:true,adminUpdateIssued:true,
   adminVoidIssued:true
 });
@@ -1227,12 +1246,139 @@ async function hydrateAfterLogin(code,seq) {
   renderRegisterTable(registerRowsCache);
   setText($('loginPerf'),'รายชื่อและทะเบียนพร้อมใช้งานแล้ว');
 }
+
+/* V2 staff name autocomplete. No static staff names or PIN values in the site. */
+var loginAccessMode='staff';
+var loginStaffRoster=[];
+var loginVisibleOptions=[];
+var loginOptionIndex=-1;
+function loginNameKey(input){
+  return toAsciiDigits(String(input||'')).normalize('NFC')
+    .toLocaleLowerCase('th-TH').replace(/\s+/g,'').trim();
+}
+function closeLoginSuggestions(){
+  $('loginPersonnelChoices').classList.add('hidden');
+  $('loginPersonnelSearch').setAttribute('aria-expanded','false');
+  $('loginPersonnelSearch').removeAttribute('aria-activedescendant');
+  loginOptionIndex=-1;
+}
+function chooseLoginPerson(person){
+  if(!person)return;
+  $('loginPersonnelId').value=person.id;
+  $('loginPersonnelSearch').value=person.name;
+  closeLoginSuggestions();
+  $('staffCode').focus({preventScroll:true});
+}
+function highlightLoginPerson(idx){
+  if(!loginVisibleOptions.length)return;
+  loginOptionIndex=(idx+loginVisibleOptions.length)%loginVisibleOptions.length;
+  var buttons=$('loginPersonnelChoices').querySelectorAll('[role="option"]');
+  buttons.forEach(function(el,n){
+    var active=n===loginOptionIndex;
+    el.setAttribute('aria-selected',active?'true':'false');
+    if(active)el.scrollIntoView({block:'nearest'});
+  });
+  $('loginPersonnelSearch').setAttribute('aria-activedescendant',
+    'login-person-'+loginOptionIndex);
+}
+function showLoginSuggestions(){
+  if(loginAccessMode!=='staff')return;
+  var q=loginNameKey($('loginPersonnelSearch').value);
+  loginVisibleOptions=loginStaffRoster.filter(function(p){
+    return loginNameKey(p.name).includes(q);
+  }).sort(function(a,b){return a.name.localeCompare(b.name,'th');});
+  loginOptionIndex=-1;
+  var list=$('loginPersonnelChoices');list.textContent='';
+  if(!loginVisibleOptions.length){
+    var none=document.createElement('div');none.className='name-empty';
+    none.textContent='ไม่พบชื่อที่ค้นหา';list.appendChild(none);
+  }
+  loginVisibleOptions.forEach(function(p,i){
+    var b=document.createElement('button');b.type='button';
+    b.id='login-person-'+i;b.className='name-choice';
+    b.setAttribute('role','option');b.setAttribute('aria-selected','false');
+    b.textContent=p.name;
+    b.addEventListener('pointerdown',function(e){e.preventDefault();});
+    b.addEventListener('click',function(){chooseLoginPerson(p);});
+    list.appendChild(b);
+  });
+  list.classList.remove('hidden');
+  $('loginPersonnelSearch').setAttribute('aria-expanded','true');
+}
+async function loadLoginStaffRoster(){
+  var r=await call('listLoginRoster',[]);
+  if(!r||!r.ok){
+    loginStaffRoster=[];
+    $('loginRosterStatus').textContent='ไม่สามารถโหลดรายชื่อได้ กรุณาเปิดหน้าใหม่อีกครั้ง';
+    return;
+  }
+  var people=r.data&&r.data.people,seen=new Set();
+  loginStaffRoster=(Array.isArray(people)?people:[]).filter(function(p){
+    if(!p||!p.id||!p.name||seen.has(p.id))return false;
+    seen.add(p.id);return true;
+  }).map(function(p){return {id:String(p.id),name:String(p.name)};});
+  $('loginRosterStatus').textContent='';
+}
+function changeLoginAccessMode(mode){
+  loginAccessMode=mode==='admin'?'admin':'staff';
+  $('staffLoginFields').classList.toggle('hidden',loginAccessMode==='admin');
+  $('adminLoginFields').classList.toggle('hidden',loginAccessMode!=='admin');
+  closeLoginSuggestions();
+  if(loginAccessMode==='admin'){
+    $('loginUsername').value='admin';
+    $('loginUsername').focus({preventScroll:true});
+  }else{
+    $('adminLoginCode').value='';
+    $('loginPersonnelSearch').focus({preventScroll:true});
+  }
+}
+$('loginPersonnelSearch').addEventListener('input',function(){
+  $('loginPersonnelId').value='';
+  showLoginSuggestions();
+});
+$('loginPersonnelSearch').addEventListener('focus',showLoginSuggestions);
+$('loginPersonnelSearch').addEventListener('click',showLoginSuggestions);
+$('loginPersonnelSearch').addEventListener('keydown',function(e){
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    if($('loginPersonnelChoices').classList.contains('hidden'))showLoginSuggestions();
+    highlightLoginPerson(loginOptionIndex+(e.key==='ArrowDown'?1:-1));
+    return;
+  }
+  if(e.key==='Enter'&&!e.isComposing){
+    e.preventDefault();
+    if(!$('loginPersonnelChoices').classList.contains('hidden')&&loginVisibleOptions.length){
+      chooseLoginPerson(loginVisibleOptions[loginOptionIndex<0?0:loginOptionIndex]);
+    }else if($('loginPersonnelId').value){
+      $('staffCode').focus({preventScroll:true});
+    }else showLoginSuggestions();
+  }
+  if(e.key==='Escape'){e.preventDefault();closeLoginSuggestions();}
+});
+document.addEventListener('pointerdown',function(e){
+  if(!$('loginPersonnelLookup').contains(e.target))closeLoginSuggestions();
+});
+$('switchToAdmin').addEventListener('click',function(){changeLoginAccessMode('admin');});
+$('switchToStaff').addEventListener('click',function(){changeLoginAccessMode('staff');});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',loadLoginStaffRoster,{once:true});
+}else loadLoginStaffRoster();
+
 async function doLogin() {
   if(loginInFlight)return;
-  var code=$('staffCode').value.trim();
-  var username=$('loginUsername').value.trim().toLowerCase();
-  if(username!=='' && username!=='staff' && username!=='admin'){
-    showMsg($('loginMsg'),'ชื่อผู้ใช้ไม่ถูกต้อง กรุณาใช้ admin หรือเว้นว่างสำหรับครู','err');return;
+  var isAdmin=loginAccessMode==='admin';
+  var code=(isAdmin?$('adminLoginCode'):$('staffCode')).value.trim();
+  var username=isAdmin?$('loginUsername').value.trim().toLowerCase():'';
+  var personId=isAdmin?'':$('loginPersonnelId').value;
+  if(isAdmin&&username!=='admin'){
+    showMsg($('loginMsg'),'กรุณากรอกชื่อผู้ใช้ admin','err');return;
+  }
+  if(!isAdmin&&!personId){
+    showMsg($('loginMsg'),'กรุณาเลือกชื่อจากรายชื่อก่อน','err');
+    $('loginPersonnelSearch').focus();return;
+  }
+  if(!isAdmin&&!/^[0-9]{6}$/.test(code)){
+    showMsg($('loginMsg'),'กรุณากรอก PIN 6 หลัก','err');return;
   }
   if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเข้าใช้งาน','err');return;}
   loginInFlight=true;
@@ -1241,7 +1387,7 @@ async function doLogin() {
   var btn=$('loginBtn');
   busy(btn,true,'กำลังยืนยันสิทธิ์…');
   var r;
-  try{r=await call('fastAuth',[code,username]);}
+  try{r=await call(isAdmin?'fastAuth':'pinSignIn',isAdmin?[code,'admin']:[personId,code]);}
   catch(e){r={ok:false,error:{message:'ติดต่อระบบตรวจรหัสไม่ได้'}};}
   finally{loginInFlight=false;busy(btn,false);}
   if(seq!==loginSequence)return;
@@ -1249,8 +1395,12 @@ async function doLogin() {
     showMsg($('loginMsg'),(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ','err');
     return;
   }
-  state.staffCode=code;state.boot=r.data;
-  state.adminCode=(username==='admin' && r.data && r.data.role==='ADMIN')?code:'';
+  var sessionCredential=isAdmin?code:String((r.data&&r.data.sessionToken)||'');
+  if(!sessionCredential){
+    showMsg($('loginMsg'),'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่','err');return;
+  }
+  state.staffCode=sessionCredential;state.boot=r.data;
+  state.adminCode=(isAdmin&&r.data&&r.data.role==='ADMIN')?code:'';
   if(state.adminCode){
     document.body.classList.add('admin-active');
     $('adminOpen').textContent='ผู้ดูแลทะเบียน • เปิดอยู่';
@@ -1260,7 +1410,7 @@ async function doLogin() {
     $('adminOpen').textContent='⚙️ ผู้ดูแลระบบ';
     $('adminLock').classList.add('hidden');
   }
-  $('staffCode').value='';
+  $('staffCode').value='';$('adminLoginCode').value='';
   hideMsg($('loginMsg'));
   $('loginCard').classList.add('hidden');
   $('appBody').classList.remove('hidden');
@@ -1270,7 +1420,7 @@ async function doLogin() {
   renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
   setupCurrentDate();
   setText($('loginPerf'),'เข้าสู่ระบบเรียบร้อย · กำลังเตรียมรายชื่อ');
-  hydrateAfterLogin(code,seq);
+  hydrateAfterLogin(sessionCredential,seq);
 }
 
 function ensureYearFilters(){
@@ -1642,13 +1792,12 @@ async function refreshBootstrap() {
 }
 
 function clearAndFocusLogin(){
-  var field=$('staffCode');
-  field.value='';
-  // Defer until login card is made visible after UI transitions.
+  $('staffCode').value='';$('adminLoginCode').value='';
   requestAnimationFrame(function(){
-    field.value='';
-    if(!$('loginCard').classList.contains('hidden'))
+    if(!$('loginCard').classList.contains('hidden')){
+      var field=loginAccessMode==='admin' ? $('loginUsername') : $('loginPersonnelSearch');
       field.focus({preventScroll:true});
+    }
   });
 }
 function doLogout() {
