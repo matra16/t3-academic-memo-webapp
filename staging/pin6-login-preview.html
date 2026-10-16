@@ -99,7 +99,7 @@ el('activateCompleteForm').addEventListener('submit',async event=>{
   const activationCode=el('activationCode').value.trim();
   const newPin=T3Pin6Rules.normalizePin(el('activationNewPin').value);
   const confirm=T3Pin6Rules.normalizePin(el('activationConfirmPin').value);
-  if(!/^\\d{12}$/.test(activationCode)){tell('กรุณากรอกรหัสยืนยัน 12 หลัก');return;}
+  if(!/^\d{12}$/.test(activationCode)){tell('กรุณากรอกรหัสยืนยัน 12 หลัก');return;}
   if(!T3Pin6Rules.validNewPin(newPin)||newPin!==confirm){tell('PIN ใหม่ต้องเป็นตัวเลข 6 หลัก ไม่เดาง่าย และตรงกันทั้งสองช่อง');return;}
   if(!PIN_BACKEND_READY){tell('STAGING_ONLY — ไม่มีการบันทึก PIN จริง');return;}
   el('activateAccountBtn').disabled=true;
