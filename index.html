@@ -1302,6 +1302,9 @@ var loginAccessMode='staff';
 var loginStaffRoster=[];
 var loginVisibleOptions=[];
 var loginOptionIndex=-1;
+var loginRosterReady=false;
+var loginRosterLoading=false;
+var loginRosterFailed=false;
 function loginNameKey(input){
   return toAsciiDigits(String(input||'')).normalize('NFC')
     .toLocaleLowerCase('th-TH').replace(/\s+/g,'').trim();
@@ -1311,11 +1314,13 @@ function closeLoginSuggestions(){
   $('loginPersonnelSearch').setAttribute('aria-expanded','false');
   $('loginPersonnelSearch').removeAttribute('aria-activedescendant');
   loginOptionIndex=-1;
+  loginVisibleOptions=[];
 }
 function chooseLoginPerson(person){
   if(!person)return;
   $('loginPersonnelId').value=person.id;
   $('loginPersonnelSearch').value=person.name;
+  $('loginRosterStatus').textContent='';
   closeLoginSuggestions();
   $('staffCode').focus({preventScroll:true});
 }
@@ -1333,41 +1338,71 @@ function highlightLoginPerson(idx){
 }
 function showLoginSuggestions(){
   if(loginAccessMode!=='staff')return;
-  var q=loginNameKey($('loginPersonnelSearch').value);
-  loginVisibleOptions=loginStaffRoster.filter(function(p){
-    return loginNameKey(p.name).includes(q);
-  }).sort(function(a,b){return a.name.localeCompare(b.name,'th');});
-  loginOptionIndex=-1;
-  var list=$('loginPersonnelChoices');list.textContent='';
-  if(!loginVisibleOptions.length){
-    var none=document.createElement('div');none.className='name-empty';
-    none.textContent='ไม่พบชื่อที่ค้นหา';list.appendChild(none);
+  var input=$('loginPersonnelSearch');
+  var q=loginNameKey(input.value);
+  var selectedId=$('loginPersonnelId').value;
+  // A previously selected name must not reopen a misleading empty-results panel.
+  if(selectedId && loginStaffRoster.some(function(p){
+    return p.id===selectedId && loginNameKey(p.name)===q;
+  })){
+    closeLoginSuggestions();return;
   }
-  loginVisibleOptions.forEach(function(p,i){
-    var b=document.createElement('button');b.type='button';
-    b.id='login-person-'+i;b.className='name-choice';
-    b.setAttribute('role','option');b.setAttribute('aria-selected','false');
-    b.textContent=p.name;
-    b.addEventListener('pointerdown',function(e){e.preventDefault();});
-    b.addEventListener('click',function(){chooseLoginPerson(p);});
-    list.appendChild(b);
-  });
+  var list=$('loginPersonnelChoices');list.textContent='';
+  loginOptionIndex=-1;
+  if(!loginRosterReady){
+    loginVisibleOptions=[];
+    var pending=document.createElement('div');pending.className='name-empty';
+    pending.textContent=loginRosterLoading?'กำลังโหลดรายชื่อ…':
+      'ไม่สามารถโหลดรายชื่อได้ กรุณาลองอีกครั้ง';
+    list.appendChild(pending);
+  }else{
+    loginVisibleOptions=loginStaffRoster.filter(function(p){
+      return loginNameKey(p.name).includes(q);
+    }).sort(function(a,b){return a.name.localeCompare(b.name,'th');});
+    // Clearing a name shows the whole ACTIVE roster (not "no matches").
+    if(!loginVisibleOptions.length && q){
+      var none=document.createElement('div');none.className='name-empty';
+      none.textContent='ไม่พบชื่อที่ค้นหา';list.appendChild(none);
+    }
+    loginVisibleOptions.forEach(function(p,i){
+      var b=document.createElement('button');b.type='button';
+      b.id='login-person-'+i;b.className='name-choice';
+      b.setAttribute('role','option');b.setAttribute('aria-selected','false');
+      b.textContent=p.name;
+      b.addEventListener('pointerdown',function(e){e.preventDefault();});
+      b.addEventListener('click',function(){chooseLoginPerson(p);});
+      list.appendChild(b);
+    });
+  }
   list.classList.remove('hidden');
-  $('loginPersonnelSearch').setAttribute('aria-expanded','true');
+  input.setAttribute('aria-expanded','true');
 }
 async function loadLoginStaffRoster(){
-  var r=await call('listLoginRoster',[]);
-  if(!r||!r.ok){
+  if(loginRosterLoading)return;
+  loginRosterLoading=true;
+  loginRosterFailed=false;
+  try{
+    var r=await call('listLoginRoster',[]);
+    if(!r||!r.ok)throw Error('ROSTER_FETCH_FAILED');
+    var people=r.data&&r.data.people,seen=new Set();
+    loginStaffRoster=(Array.isArray(people)?people:[]).filter(function(p){
+      if(!p||!p.id||!p.name||seen.has(p.id))return false;
+      seen.add(p.id);return true;
+    }).map(function(p){return {id:String(p.id),name:String(p.name)};});
+    if(!loginStaffRoster.length)throw Error('ROSTER_EMPTY');
+    loginRosterReady=true;
+    $('loginRosterStatus').textContent='';
+  }catch(e){
+    loginRosterReady=false;
+    loginRosterFailed=true;
     loginStaffRoster=[];
-    $('loginRosterStatus').textContent='ไม่สามารถโหลดรายชื่อได้ กรุณาเปิดหน้าใหม่อีกครั้ง';
-    return;
+    $('loginRosterStatus').textContent='โหลดรายชื่อไม่สำเร็จ คลิกช่องชื่อเพื่อลองใหม่';
+  }finally{
+    loginRosterLoading=false;
+    // Refresh a dropdown opened before the async roster request finished.
+    if(document.activeElement===$('loginPersonnelSearch'))showLoginSuggestions();
   }
-  var people=r.data&&r.data.people,seen=new Set();
-  loginStaffRoster=(Array.isArray(people)?people:[]).filter(function(p){
-    if(!p||!p.id||!p.name||seen.has(p.id))return false;
-    seen.add(p.id);return true;
-  }).map(function(p){return {id:String(p.id),name:String(p.name)};});
-  $('loginRosterStatus').textContent='';
+  if(!loginRosterReady)return;
   // URL fragment never leaves the browser in the initial page request.
   var match=location.hash.match(/^#activate=([^\.]+)\.(.+)$/);
   if(match){
@@ -1395,11 +1430,24 @@ function changeLoginAccessMode(mode){
   }
 }
 $('loginPersonnelSearch').addEventListener('input',function(){
-  $('loginPersonnelId').value='';
+  var id=$('loginPersonnelId');
+  var before=id.value;
+  id.value='';
+  // Switching/clearing a selected person clears that person's private PIN and activation data.
+  if(before){$('staffCode').value='';$('v3ActivationCode').value='';}
+  var needle=loginNameKey(this.value);
+  var exact=loginStaffRoster.filter(function(p){return loginNameKey(p.name)===needle;});
+  if(needle && exact.length===1)id.value=exact[0].id;
   showLoginSuggestions();
 });
-$('loginPersonnelSearch').addEventListener('focus',showLoginSuggestions);
-$('loginPersonnelSearch').addEventListener('click',showLoginSuggestions);
+$('loginPersonnelSearch').addEventListener('focus',function(){
+  if(!loginRosterReady&&!loginRosterLoading)loadLoginStaffRoster();
+  showLoginSuggestions();
+});
+$('loginPersonnelSearch').addEventListener('click',function(){
+  if(!loginRosterReady&&!loginRosterLoading&&!loginRosterFailed)loadLoginStaffRoster();
+  showLoginSuggestions();
+});
 $('loginPersonnelSearch').addEventListener('keydown',function(e){
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){
     e.preventDefault();
