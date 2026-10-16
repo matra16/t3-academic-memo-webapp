@@ -1429,17 +1429,21 @@ function changeLoginAccessMode(mode){
     $('loginPersonnelSearch').focus({preventScroll:true});
   }
 }
-$('loginPersonnelSearch').addEventListener('input',function(){
+function onLoginPersonnelTextChange(){
   var id=$('loginPersonnelId');
-  var before=id.value;
+  var previous=id.value;
   id.value='';
-  // Switching/clearing a selected person clears that person's private PIN and activation data.
-  if(before){$('staffCode').value='';$('v3ActivationCode').value='';}
-  var needle=loginNameKey(this.value);
+  // A cleared search cannot keep a stale PersonID, PIN or one-use activation token.
+  if(previous){$('staffCode').value='';$('v3ActivationCode').value='';}
+  var needle=loginNameKey($('loginPersonnelSearch').value);
   var exact=loginStaffRoster.filter(function(p){return loginNameKey(p.name)===needle;});
   if(needle && exact.length===1)id.value=exact[0].id;
   showLoginSuggestions();
-});
+}
+$('loginPersonnelSearch').addEventListener('input',onLoginPersonnelTextChange);
+// Chrome search-field X and browser clear operations may dispatch search/change separately.
+$('loginPersonnelSearch').addEventListener('search',onLoginPersonnelTextChange);
+$('loginPersonnelSearch').addEventListener('change',onLoginPersonnelTextChange);
 $('loginPersonnelSearch').addEventListener('focus',function(){
   if(!loginRosterReady&&!loginRosterLoading)loadLoginStaffRoster();
   showLoginSuggestions();
