@@ -644,6 +644,19 @@
     body.workspace-ready #appBody[data-workspace-view="accounts"] #v3BulkPrepare,
     body.workspace-ready #appBody[data-workspace-view="accounts"] #v3InviteLink{grid-column:1}
   }
+  /* School-owned V3.6 first-PIN UX: dialog is NOT an identity assertion. */
+  #v36FirstPinDialog{width:min(460px,calc(100vw - 20px));max-height:90dvh;box-sizing:border-box;
+    overflow-y:auto;border:1px solid #7baaa0;border-radius:16px;padding:22px;
+    background:#f9fefa;color:#183c33;box-shadow:0 15px 60px #091b1780}
+  #v36FirstPinDialog::backdrop{background:#051b1aab}
+  #v36FirstPinDialog label{display:block;margin-top:12px;font-weight:700}
+  #v36FirstPinDialog input{width:100%;box-sizing:border-box;min-height:42px;
+    border:1px solid #accbc3;border-radius:9px;padding:8px 10px}
+  #v36FirstPinDialog .v36-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+  #v36FirstPinDialog .v36-actions button{min-height:42px;width:100%;padding:6px}
+  #v36FirstPinDialog p{line-height:1.5}
+  #v36FirstPinMessage{font-size:.85rem;min-height:22px;white-space:normal}
+  @media(max-width:370px){#v36FirstPinDialog .v36-actions{grid-template-columns:1fr}}
   #history[aria-busy="true"]{opacity:.83;transition:opacity .15s}
   #histMsg:not(:empty){min-height:30px;line-height:1.35}
   #historyDialog .hist-item{content-visibility:auto;contain-intrinsic-size:auto 82px}
@@ -734,6 +747,23 @@
     </form>
   </section>
 
+  <dialog id="v36FirstPinDialog" aria-labelledby="v36Title">
+    <h2 id="v36Title">🔐 เปลี่ยน PIN ครั้งแรก</h2>
+    <p>ตั้ง PIN ส่วนตัวใหม่ 6 หลักทันที โดยจะเปิดใช้งานบัญชีหลังตรวจสอบรหัสเปิดบัญชีที่ออกให้บุคลากรแต่ละคนเท่านั้น</p>
+    <label for="v36NewPin">PIN ใหม่</label>
+    <input id="v36NewPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" />
+    <label for="v36ConfirmPin">ยืนยัน PIN ใหม่</label>
+    <input id="v36ConfirmPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" />
+    <label for="v36ProofCode">รหัสเปิดบัญชีเฉพาะบุคคล</label>
+    <input id="v36ProofCode" type="password" autocomplete="one-time-code" spellcheck="false"
+           placeholder="กรอกรหัสส่วนตัวที่ได้รับ" />
+    <p class="hint">รหัสเริ่มต้น 123456 และการเลือกชื่อไม่ใช่หลักฐานยืนยันตัวตน รหัสเปิดบัญชีต้องเป็นรหัสเฉพาะบุคคลที่ส่งมอบอย่างปลอดภัย</p>
+    <div id="v36FirstPinMessage" role="status" aria-live="polite"></div>
+    <div class="v36-actions">
+      <button id="v36Cancel" type="button" class="btn-secondary">ยกเลิก</button>
+      <button id="v36Save" type="button" class="btn-primary">🔒 ยืนยันและบันทึก PIN</button>
+    </div>
+  </dialog>
   <!-- ============ MAIN ============ -->
   <section id="appBody" class="hidden" data-workspace-view="dashboard">
     <nav id="workspaceNav" class="workspace-nav" aria-label="เลือกหน้าทำงาน">
@@ -1479,6 +1509,10 @@ function closeLoginSuggestions(){
 }
 function chooseLoginPerson(person){
   if(!person)return;
+  if($('loginPersonnelId').value && $('loginPersonnelId').value!==person.id){
+    v3PendingSetup=null;$('v3ActivationCode').value='';$('staffCode').value='';
+    if($('v36FirstPinDialog').open){$('v36FirstPinDialog').close();v36ClearDialog();}
+  }
   $('loginPersonnelId').value=person.id;
   $('loginPersonnelSearch').value=person.name;
   $('loginRosterStatus').textContent='';
@@ -1663,6 +1697,10 @@ async function doLogin() {
     showMsg($('loginMsg'),'กรุณากรอก PIN 6 หลัก','err');return;
   }
   if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเข้าใช้งาน','err');return;}
+  if(!isAdmin&&code==='123456'){
+    if(!v36OpenDialog())showMsg($('loginMsg'),'ไม่สามารถเริ่มขั้นตอนตั้ง PIN ได้ กรุณาเลือกชื่อใหม่','err');
+    return;
+  }
   loginInFlight=true;
   var seq=++loginSequence;
   var started=performance.now();
@@ -1684,9 +1722,7 @@ async function doLogin() {
   }
   if(!isAdmin&&r.data&&r.data.firstChangeRequired){
     v3PendingSetup={id:personId,token:r.data.setupToken};
-    $('v3FirstChangeControls').classList.remove('hidden');
-    $('v3NextPin').focus();
-    showMsg($('loginMsg'),'ตั้ง PIN ใหม่ 6 หลัก แล้วจดจำรหัสไว้สำหรับครั้งต่อไป','warn');
+    $('staffCode').value='123456';v36OpenDialog();
     return;
   }
   var sessionCredential=isAdmin?code:String((r.data&&r.data.sessionToken)||'');
@@ -1718,6 +1754,63 @@ async function doLogin() {
   hydrateAfterLogin(sessionCredential,seq);
 }
 
+
+/* The first-PIN dialog is immediate UI only; no protected session is granted
+   without a valid server-side person-bound, one-time enrollment credential. */
+var v36Saving=false;
+function v36ClearDialog(){
+  ['v36NewPin','v36ConfirmPin','v36ProofCode'].forEach(function(id){$(id).value='';});
+  $('v36FirstPinMessage').textContent='';
+}
+function v36OpenDialog(){
+  if(loginAccessMode!=='staff'||!$('loginPersonnelId').value||loginInFlight||
+     $('staffCode').value.trim()!=='123456'||state.staffCode)return false;
+  if(!$('v36FirstPinDialog').open){
+    v36ClearDialog();
+    $('v36ProofCode').value=$('v3ActivationCode').value.trim();
+    $('v36FirstPinDialog').showModal();
+    $('v36NewPin').focus();
+  }
+  return true;
+}
+$('staffCode').addEventListener('input',function(){if(this.value==='123456')v36OpenDialog();});
+function v36AbortEnrollment(){
+  if($('v36FirstPinDialog').open)$('v36FirstPinDialog').close();
+  v36ClearDialog();v3PendingSetup=null;
+  $('staffCode').value='';$('v3ActivationCode').value='';
+}
+$('v36Cancel').addEventListener('click',function(){v36AbortEnrollment();$('staffCode').focus();});
+$('v36FirstPinDialog').addEventListener('cancel',function(e){
+  e.preventDefault();v36AbortEnrollment();$('staffCode').focus();
+});
+$('v36Save').addEventListener('click',async function(){
+  if(v36Saving)return;
+  var id=$('loginPersonnelId').value,newPin=$('v36NewPin').value,
+      repeated=$('v36ConfirmPin').value,proof=$('v36ProofCode').value.trim();
+  if(!/^[0-9]{6}$/.test(newPin)||newPin==='123456'||newPin!==repeated){
+    $('v36FirstPinMessage').textContent='กรุณาตั้ง PIN ใหม่ 6 หลักที่ไม่ใช่ 123456 และยืนยันให้ตรงกัน';return;
+  }
+  if(!proof&&!v3PendingSetup){
+    $('v36FirstPinMessage').textContent='ยังไม่สามารถเปิดบัญชีได้: ต้องมีรหัสเปิดบัญชีเฉพาะบุคคลที่ส่งมอบถึงเจ้าของบัญชีแล้ว';
+    return;
+  }
+  v36Saving=true;busy(this,true,'กำลังตรวจสอบรหัส…');
+  try{
+    var token=v3PendingSetup&&v3PendingSetup.id===id?v3PendingSetup.token:'';
+    if(!token){
+      var proofResult=await call('pinSignIn',[id,'123456',proof]);
+      if(!proofResult?.ok||!proofResult.data?.firstChangeRequired){
+        $('v36FirstPinMessage').textContent='รหัสเปิดบัญชีไม่ถูกต้อง หมดอายุ หรือบัญชีนี้เปิดใช้แล้ว';return;
+      }
+      token=proofResult.data.setupToken;
+    }
+    var completed=await call('pinCompleteFirstChange',[id,token,newPin]);
+    if(!completed?.ok){
+      $('v36FirstPinMessage').textContent=completed?.error?.message||'ยังไม่สามารถบันทึก PIN ได้';return;
+    }
+    $('v36FirstPinDialog').close();v36ClearDialog();v3PendingSetup=null;v3CompleteStaffSession(completed.data);
+  }finally{v36Saving=false;busy($('v36Save'),false);}
+});
 
 /* Private activation and account recovery. */
 var v3PendingSetup=null;
