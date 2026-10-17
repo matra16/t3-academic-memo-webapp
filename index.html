@@ -1563,20 +1563,27 @@ async function loadLoginStaffRoster(){
     // Refresh a dropdown opened before the async roster request finished.
     if(document.activeElement===$('loginPersonnelSearch'))showLoginSuggestions();
   }
-  if(!loginRosterReady)return;
-  // URL fragment never leaves the browser in the initial page request.
+  consumePrivateActivationHash();
+}
+/* Also handle a private link pasted into an already-open Login tab:
+   a fragment-only navigation does not reload the document. */
+function consumePrivateActivationHash(){
+  if(!loginRosterReady||state.staffCode)return;
   var match=location.hash.match(/^#activate=([^\.]+)\.(.+)$/);
-  if(match){
-    var id=decodeURIComponent(match[1]),token=decodeURIComponent(match[2]);
-    var person=loginStaffRoster.find(function(x){return x.id===id;});
-    history.replaceState(null,'',location.pathname+location.search);
-    if(person){
-      chooseLoginPerson(person);
-      $('v3ActivationCode').value=token;
-      $('staffCode').focus({preventScroll:true});
-    }
+  if(!match)return;
+  var id=decodeURIComponent(match[1]),token=decodeURIComponent(match[2]);
+  var person=loginStaffRoster.find(function(x){return x.id===id;});
+  history.replaceState(null,'',location.pathname+location.search);
+  if(person){
+    chooseLoginPerson(person);
+    $('v3ActivationCode').value=token;
+    showMsg($('loginMsg'),'ตรวจพบลิงก์เปิดบัญชีส่วนตัวแล้ว กรุณากรอก PIN เริ่มต้นและเข้าสู่ขั้นตอนตั้ง PIN ใหม่','ok');
+    $('staffCode').focus({preventScroll:true});
+  }else{
+    showMsg($('loginMsg'),'บัญชีในลิงก์ไม่อยู่ในรายชื่อผู้มีสิทธิ์ กรุณาติดต่อผู้ดูแล','err');
   }
 }
+window.addEventListener('hashchange',consumePrivateActivationHash);
 function changeLoginAccessMode(mode){
   loginAccessMode=mode==='admin'?'admin':'staff';
   $('staffLoginFields').classList.toggle('hidden',loginAccessMode==='admin');
@@ -1670,7 +1677,7 @@ async function doLogin() {
   if(!r || !r.ok){
     var message=(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ';
     if(!isAdmin&&r&&r.error&&r.error.code==='INVITATION_REQUIRED'){
-      message='บัญชีนี้ยังไม่พร้อมตั้ง PIN ครั้งแรก กรุณาให้ผู้ดูแลเปิดสิทธิ์ให้';
+      message='ต้องใช้ลิงก์เปิดบัญชีเฉพาะตัวก่อนตั้ง PIN ครั้งแรก: ให้ผู้ดูแลเข้า 🛡️ จัดการบัญชี → เลือกชื่อ → 🔗 สร้างลิงก์เฉพาะราย แล้วส่งลิงก์ทาง LINE ส่วนตัว เมื่อเปิดลิงก์จึงใช้ PIN เริ่มต้นและตั้ง PIN ใหม่ได้';
     }
     showMsg($('loginMsg'),message,'err');
     return;
@@ -1769,8 +1776,8 @@ $('v3BulkPrepare').addEventListener('click',async function(){
     var result=await call('v3AdminPrepareMissingInvites',[state.adminCode]);
     if(!result||!result.ok)throw Error(result?.error?.message||'ไม่สามารถเตรียมบัญชีได้');
     var data=result.data||{},rows=data.people||[];
-    $('v3BulkStatus').textContent='พร้อมส่งลิงก์ส่วนตัว '+rows.length+' รายการ จากผู้มีสิทธิ์ '+
-       data.eligible+' คน (มีบัญชีอยู่แล้ว '+data.alreadyKnown+' คน)';
+    $('v3BulkStatus').textContent='เตรียมลิงก์ใหม่ '+rows.length+' รายการ จากผู้มีสิทธิ์ '+
+       data.eligible+' คน (บัญชีเดิม '+data.alreadyKnown+' คน — หากยังตั้ง PIN ไม่ได้ ให้เลือกชื่อและกด 🔗 สร้างลิงก์เฉพาะราย)';
     var holder=$('v3BulkLinks');holder.textContent='';
     rows.forEach(function(person){
       var line=document.createElement('div');line.className='row';
