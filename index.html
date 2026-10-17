@@ -660,6 +660,29 @@
   #history[aria-busy="true"]{opacity:.83;transition:opacity .15s}
   #histMsg:not(:empty){min-height:30px;line-height:1.35}
   #historyDialog .hist-item{content-visibility:auto;contain-intrinsic-size:auto 82px}
+
+/* Shared branded notification design: alert, confirm, reason and token entry. */
+#t3NoticeDialog{width:min(460px,calc(100vw - 28px));max-height:86vh;margin:auto;padding:0;
+ border:1px solid #93bdb6;border-radius:15px;background:#fff;color:#173c3c;
+ box-shadow:0 22px 66px #061b2066;overflow:auto}
+#t3NoticeDialog::backdrop{background:#041a1ccb;backdrop-filter:blur(2px)}
+#t3NoticeDialog .notice-head{padding:18px 22px 12px;background:#eaf5f2;border-bottom:1px solid #c8e1da}
+#t3NoticeDialog h2{margin:0;color:#164d47;font-size:1.23rem;line-height:1.5}
+#t3NoticeDialog .notice-body{padding:20px 22px 8px}
+#t3NoticeMessage{white-space:pre-line;overflow-wrap:anywhere;line-height:1.7;margin:0 0 12px}
+#t3NoticeDialog .notice-field{display:grid;gap:7px;margin:14px 0}
+#t3NoticeDialog .notice-field label{font-weight:700;color:#244c4a}
+#t3NoticeDialog .notice-field input,#t3NoticeDialog .notice-field textarea{
+ width:100%;background:#fff;color:#143b37;border:1px solid #85aca4;border-radius:9px;
+ min-height:43px;padding:10px;font:inherit;box-sizing:border-box}
+#t3NoticeDialog .notice-actions{display:flex;gap:10px;justify-content:flex-end;
+ padding:14px 22px 22px;flex-wrap:wrap}
+#t3NoticeDialog .notice-actions button{min-height:44px;min-width:105px;width:auto;flex:1}
+#t3NoticeDialog[data-tone="danger"] .notice-head{background:#fff0ed}
+#t3NoticeDialog[data-tone="danger"] .notice-head h2{color:#8b312b}
+#t3NoticeDialog[data-tone="danger"] #t3NoticeAccept{background:#a8312e}
+#t3NoticeError{min-height:20px;font-size:.88rem;color:#a52b28}
+@media(max-width:370px){#t3NoticeDialog .notice-actions{flex-direction:column}}
   </style>
 </head>
 <body>
@@ -762,6 +785,22 @@
     <div class="v36-actions">
       <button id="v36Cancel" type="button" class="btn-secondary">ยกเลิก</button>
       <button id="v36Save" type="button" class="btn-primary">🔒 ยืนยันและบันทึก PIN</button>
+    </div>
+  </dialog>
+  <dialog id="t3NoticeDialog" aria-labelledby="t3NoticeTitle" aria-describedby="t3NoticeMessage" data-tone="normal">
+    <div class="notice-head"><h2 id="t3NoticeTitle">แจ้งเตือน</h2></div>
+    <div class="notice-body">
+      <p id="t3NoticeMessage"></p>
+      <div id="t3NoticeFieldWrap" class="notice-field hidden">
+        <label id="t3NoticeFieldLabel" for="t3NoticeField">รายละเอียด</label>
+        <textarea id="t3NoticeField" rows="3" maxlength="500"></textarea>
+        <input id="t3NoticeSecret" class="hidden" type="password" autocomplete="off" maxlength="500" />
+      </div>
+      <div id="t3NoticeError" role="alert" aria-live="polite"></div>
+    </div>
+    <div class="notice-actions">
+      <button id="t3NoticeCancel" type="button" class="btn-secondary">ยกเลิก</button>
+      <button id="t3NoticeAccept" type="button" class="btn-primary">ตกลง</button>
     </div>
   </dialog>
   <!-- ============ MAIN ============ -->
@@ -1065,6 +1104,76 @@ var thaiDisplayObserver=new MutationObserver(function(records){
 });
 thaiDisplayTree(document.body);
 thaiDisplayObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
+/* Central branded notification service: in-app alert, confirmation and prompt.
+   Serial queue prevents modal collision. All text uses textContent. */
+var t3NoticeQueue=Promise.resolve();
+function t3Notice(config) {
+  var opts=config||{};
+  function openNotice() {
+    return new Promise(function(resolve) {
+      var dlg=$('t3NoticeDialog'),kind=opts.kind||'alert';
+      var textField=$('t3NoticeField'),secretField=$('t3NoticeSecret');
+      var field=opts.sensitive?secretField:textField,wrap=$('t3NoticeFieldWrap');
+      var accept=$('t3NoticeAccept'),cancel=$('t3NoticeCancel');
+      var error=$('t3NoticeError'),previous=document.activeElement,settled=false;
+      var isInput=kind==='prompt';
+      var cancelValue=kind==='confirm'?false:null;
+      $('t3NoticeTitle').textContent=opts.title||
+        (kind==='confirm'?'ยืนยันการดำเนินการ':kind==='prompt'?'กรอกข้อมูลประกอบ':'แจ้งเตือน');
+      $('t3NoticeMessage').textContent=String(opts.message||'');
+      dlg.dataset.tone=opts.tone==='danger'?'danger':'normal';
+      wrap.classList.toggle('hidden',!isInput);
+      textField.classList.toggle('hidden',!!opts.sensitive);
+      secretField.classList.toggle('hidden',!opts.sensitive);
+      cancel.classList.toggle('hidden',kind==='alert');
+      accept.textContent=opts.acceptText||(kind==='alert'?'รับทราบ':'ยืนยัน');
+      cancel.textContent=opts.cancelText||'ยกเลิก';
+      var fieldLabel=$('t3NoticeFieldLabel');
+      fieldLabel.textContent=opts.fieldLabel||'รายละเอียด';
+      fieldLabel.setAttribute('for',field.id);
+      textField.value='';secretField.value='';
+      field.value=isInput?String(opts.defaultValue||''):'';
+      field.maxLength=opts.maxLength||500;
+      field.placeholder=opts.placeholder||'';
+      error.textContent='';
+      function clearListeners(){
+        accept.removeEventListener('click',acceptClick);
+        cancel.removeEventListener('click',cancelClick);
+        dlg.removeEventListener('cancel',escapeCancel);
+      }
+      function finish(value){
+        if(settled)return;
+        settled=true;clearListeners();
+        textField.value='';secretField.value='';error.textContent='';
+        if(dlg.open)dlg.close();
+        if(previous&&previous.isConnected&&typeof previous.focus==='function'){
+          try{previous.focus({preventScroll:true});}catch(e){}
+        }
+        resolve(value);
+      }
+      function acceptClick(){
+        if(isInput){
+          var entered=field.value.trim();
+          if(opts.required&&!entered){error.textContent='กรุณาระบุข้อมูลให้ครบถ้วน';field.focus();return;}
+          finish(entered);
+        }else finish(true);
+      }
+      function cancelClick(){finish(cancelValue);}
+      function escapeCancel(e){e.preventDefault();finish(cancelValue);}
+      accept.addEventListener('click',acceptClick);
+      cancel.addEventListener('click',cancelClick);
+      dlg.addEventListener('cancel',escapeCancel);
+      dlg.showModal();
+      (isInput?field:accept).focus({preventScroll:true});
+    });
+  }
+  var pending=t3NoticeQueue.then(openNotice);
+  t3NoticeQueue=pending.then(function(){},function(){});
+  return pending;
+}
+function t3Confirm(message,opts){return t3Notice(Object.assign({kind:'confirm',message:message},opts||{}));}
+function t3Prompt(message,opts){return t3Notice(Object.assign({kind:'prompt',message:message},opts||{}));}
+function t3Alert(message,opts){return t3Notice(Object.assign({kind:'alert',message:message},opts||{}));}
 var state = { staffCode: '', boot: null, tokens: {}, adminCode: '' };
 var registerRowsCache=[];var activeEditMemo=null;
 /* Browser-memory ONLY, 45-second validated-history cache. No credentials,
@@ -1861,7 +1970,7 @@ $('v3ResetPin').addEventListener('click',async function(){
 /* Admin-only, one click. One-use private links must be sent individually. */
 $('v3BulkPrepare').addEventListener('click',async function(){
   if(!state.adminCode)return;
-  if(!confirm('เตรียมลิงก์ส่วนตัวให้ครูที่ยังไม่มี PIN ใช่หรือไม่?'))return;
+  if(!await t3Confirm('เตรียมลิงก์ส่วนตัวให้ครูที่ยังไม่มี PIN ใช่หรือไม่?'))return;
   var button=this;
   button.disabled=true;
   $('v3BulkStatus').textContent='กำลังเตรียมลิงก์สำหรับบัญชีที่ยังไม่มี PIN…';
@@ -1894,14 +2003,14 @@ $('v3BulkPrepare').addEventListener('click',async function(){
 $('v3GenerateInvite').addEventListener('click',async function(){
   if(!state.adminCode)return;
   var r=await call('v3AdminIssueInvitation',[state.adminCode,$('v3InvitePersonnel').value]);
-  if(!r||!r.ok){alert(r?.error?.message||'ไม่สามารถสร้างลิงก์ได้');return;}
+  if(!r||!r.ok){await t3Alert(r?.error?.message||'ไม่สามารถสร้างลิงก์ได้');return;}
   $('v3InviteLink').value=r.data.activationLink;
 });
 $('v3AdminReset').addEventListener('click',async function(){
   if(!state.adminCode)return;
-  if(!confirm('รีเซตบัญชีที่เลือกและยกเลิก Session เดิม?'))return;
+  if(!await t3Confirm('รีเซตบัญชีที่เลือกและยกเลิก Session เดิม?'))return;
   var r=await call('pinAdminReset',[state.adminCode,$('v3InvitePersonnel').value]);
-  if(!r||!r.ok){alert(r?.error?.message||'ไม่สามารถรีเซตบัญชีได้');return;}
+  if(!r||!r.ok){await t3Alert(r?.error?.message||'ไม่สามารถรีเซตบัญชีได้');return;}
   $('v3InviteLink').value='https://matra16.github.io/t3-academic-memo-webapp/#activate='+
      encodeURIComponent($('v3InvitePersonnel').value)+'.'+encodeURIComponent(r.data.invitationCode);
 });
@@ -2103,22 +2212,22 @@ function openEditMemo(m) {
 }
 async function deleteMemoByAdmin(m) {
   if(!state.adminCode)return;
-  if(!confirm('ยืนยันลบเลขที่ '+m.DocumentNo+' จากรายการใช้งาน?\\nประวัติจะเก็บไว้เพื่อตรวจสอบ'))return;
-  var reason=prompt('เหตุผลที่ลบเลขทะเบียน');
+  if(!await t3Confirm('ยืนยันลบเลขที่ '+m.DocumentNo+' จากรายการใช้งาน?\\nประวัติจะเก็บไว้เพื่อตรวจสอบ'))return;
+  var reason=await t3Prompt('เหตุผลที่ลบเลขทะเบียน');
   if(reason===null)return;
-  if(!reason.trim()){alert('กรุณาระบุเหตุผล');return;}
-  var wantsReturn=confirm('ต้องการคืนเลขท้ายสุดของวันนี้หรือไม่?\\nคืนได้เฉพาะเลขที่ยังไม่ใช้และมีการอนุมัตินโยบาย');
+  if(!reason.trim()){await t3Alert('กรุณาระบุเหตุผล');return;}
+  var wantsReturn=await t3Confirm('ต้องการคืนเลขท้ายสุดของวันนี้หรือไม่?\\nคืนได้เฉพาะเลขที่ยังไม่ใช้และมีการอนุมัตินโยบาย');
   var policy='';
   if(wantsReturn){
-    policy=prompt('เลขอ้างอิงเอกสารอนุมัตินโยบายคืนเลข (ไม่มีให้กดยกเลิก)')||'';
-    if(!policy.trim()){alert('ยังไม่มีเอกสารอนุมัติ ไม่สามารถคืนเลขได้');return;}
-    if(!confirm('ยืนยันว่าเลขนี้ยังไม่ถูกอ้างอิงหรือส่งออกไปที่ใด?'))return;
+    policy=await t3Prompt('เลขอ้างอิงเอกสารอนุมัตินโยบายคืนเลข (ไม่มีให้กดยกเลิก)')||'';
+    if(!policy.trim()){await t3Alert('ยังไม่มีเอกสารอนุมัติ ไม่สามารถคืนเลขได้');return;}
+    if(!await t3Confirm('ยืนยันว่าเลขนี้ยังไม่ถูกอ้างอิงหรือส่งออกไปที่ใด?'))return;
   }
   var r=await call('adminVoidIssued',[{adminCode:state.adminCode,
     memoId:m.MemoID,expectedRevision:Number(m.Revision),reason:reason.trim(),
     confirmed:true,returnNumber:wantsReturn,policyApprovalRef:policy,
     noExternalUseAttested:wantsReturn}]);
-  if(!r||!r.ok){alert((r&&r.error&&r.error.message)||'ลบเลขไม่สำเร็จ');return;}
+  if(!r||!r.ok){await t3Alert((r&&r.error&&r.error.message)||'ลบเลขไม่สำเร็จ');return;}
   invalidateHistoryCache();
   await loadRegister();await refreshBootstrap();
 }
@@ -2218,7 +2327,7 @@ async function submitRequest() {
     showMsg($('submitMsg'),'ทะเบียนกำหนดเลขเริ่มต้น /๑ แล้ว แต่ยังรอเปิดใช้งานเพื่อออกเลขจริง กรุณาติดต่อผู้ดูแลทะเบียน','warn');
     $('submitMsg').scrollIntoView({block:'nearest',behavior:'smooth'});return;
   }
-  if(!confirm('ยืนยันออกเลขและบันทึกทะเบียนทันที?\nหลังบันทึกผู้ใช้งานทั่วไปจะไม่สามารถแก้ไขหรือลบได้'))return;
+  if(!await t3Confirm('ยืนยันออกเลขและบันทึกทะเบียนทันที?\nหลังบันทึกผู้ใช้งานทั่วไปจะไม่สามารถแก้ไขหรือลบได้',{title:'ยืนยันออกเลขบันทึกข้อความ',acceptText:'ยืนยันออกเลข'}))return;
   var btn = $('submitBtn');
   busy(btn, true, 'กำลังออกเลขทะเบียน…');
   hideMsg($('submitMsg'));
@@ -2274,17 +2383,17 @@ async function submitRequest() {
 }
 
 /* ================= cancel ================= */
-function openCancel(memo) {
+async function openCancel(memo) {
   var token = state.tokens[memo.MemoID];
   var useTyped = false;
   if (!token) {
-    var t = prompt('กรุณากรอกรหัสยืนยันการยกเลิกที่ได้รับตอนออกเลข (แสดงครั้งเดียว)\n' +
-      'หมายเหตุ: ยกเลิกแล้วเลขนี้จะไม่ถูกนำกลับมาใช้');
+    var t = await t3Prompt('กรุณากรอกรหัสยืนยันการยกเลิกที่ได้รับตอนออกเลข (แสดงครั้งเดียว)\n' +
+      'หมายเหตุ: ยกเลิกแล้วเลขนี้จะไม่ถูกนำกลับมาใช้',{title:'รหัสยืนยันการยกเลิก',fieldLabel:'รหัสยืนยัน',sensitive:true,required:true});
     if (t === null) return;
     token = t.trim(); useTyped = true;
   }
   if (!token) return;
-  var reason = prompt('เหตุผลที่ยกเลิก:', 'ยกเลิกหนังสือ');
+  var reason = await t3Prompt('เหตุผลที่ยกเลิก:', 'ยกเลิกหนังสือ');
   if (reason === null) return;
   state.tokens[memo.MemoID] = token;
   doCancel(memo.MemoID, token, reason.trim(), useTyped);
@@ -2327,8 +2436,17 @@ function doLogout() {
   state.staffCode = ''; state.boot = null; state.tokens = {};state.adminCode='';document.body.classList.remove('admin-active','workspace-ready');
   $('appBody').classList.add('hidden');
   $('topActions').classList.add('hidden');
+  $('adminOpen').textContent='⚙ ผู้ดูแลระบบ';
+  $('adminLock').classList.add('hidden');
+  if($('t3NoticeDialog').open)$('t3NoticeCancel').click();
+  document.querySelectorAll('dialog[open]').forEach(function(dlg){dlg.close();});
   closeNameSuggestions();
   $('loginCard').classList.remove('hidden');
+  $('loginPersonnelSearch').value='';
+  $('loginPersonnelId').value='';
+  $('loginUsername').value='admin';
+  changeLoginAccessMode('staff');
+  if(!loginRosterReady&&!loginRosterLoading)loadLoginStaffRoster();
   $('resultBox').classList.add('hidden');
   $('tokenBox').classList.add('hidden');
   invalidateHistoryCache();
@@ -2383,33 +2501,19 @@ $('adminUnlock').addEventListener('click',async function(){
   $('adminLock').classList.remove('hidden');
   $('adminDialog').close();renderRegisterTable(registerRowsCache);
 });
-$('adminLock').addEventListener('click',function(){
-  state.adminCode='';document.body.classList.remove('admin-active');
-  $('adminOpen').textContent='⚙️ ผู้ดูแลระบบ';
-  $('adminLock').classList.add('hidden');
-  setText($('adminMsg'),'ปิดสิทธิ์ผู้ดูแลแล้ว');
-  setWorkspaceView('register');
-  renderRegisterTable(registerRowsCache);
-});
+$('adminLock').addEventListener('click',function(){doLogout();});
 $('editClose').addEventListener('click',function(){$('editDialog').close();});
 var lastAdminActivity=Date.now();
 document.addEventListener('pointerdown',function(){lastAdminActivity=Date.now();},true);
 document.addEventListener('keydown',function(){lastAdminActivity=Date.now();},true);
-function lockAdminSession() {
-  state.adminCode='';
-  document.body.classList.remove('admin-active');
-  $('adminOpen').textContent='⚙️ ผู้ดูแลระบบ';
-  $('adminLock').classList.add('hidden');
-  setWorkspaceView('register');
-  renderRegisterTable(registerRowsCache);
-}
+function lockAdminSession() {if(state.adminCode)doLogout();}
 setInterval(function(){
   if(state.adminCode && Date.now()-lastAdminActivity>900000)lockAdminSession();
 },60000);
 $('editSave').addEventListener('click',async function(){
   var m=activeEditMemo;
   if(!m || !state.adminCode)return;
-  if(!confirm('ยืนยันแก้ไขทะเบียนโดยผู้ดูแล?'))return;
+  if(!await t3Confirm('ยืนยันแก้ไขทะเบียนโดยผู้ดูแล?'))return;
   var r=await call('adminUpdateIssued',[{
     adminCode:state.adminCode,memoId:m.MemoID,expectedRevision:Number(m.Revision),
     subject:$('editSubject').value.trim(),category:$('editCategory').value.trim(),
