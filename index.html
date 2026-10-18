@@ -772,15 +772,12 @@
 
   <dialog id="v36FirstPinDialog" aria-labelledby="v36Title">
     <h2 id="v36Title">🔐 เปลี่ยน PIN ครั้งแรก</h2>
-    <p>ตั้ง PIN ส่วนตัวใหม่ 6 หลักทันที โดยจะเปิดใช้งานบัญชีหลังตรวจสอบรหัสเปิดบัญชีที่ออกให้บุคลากรแต่ละคนเท่านั้น</p>
+    <p>ตั้ง PIN ส่วนตัวใหม่ 6 หลัก หลังยืนยัน PIN ชั่วคราวเฉพาะบัญชีสำเร็จ</p>
     <label for="v36NewPin">PIN ใหม่</label>
     <input id="v36NewPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" />
     <label for="v36ConfirmPin">ยืนยัน PIN ใหม่</label>
     <input id="v36ConfirmPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" />
-    <label for="v36ProofCode">รหัสเปิดบัญชีเฉพาะบุคคล</label>
-    <input id="v36ProofCode" type="password" autocomplete="one-time-code" spellcheck="false"
-           placeholder="กรอกรหัสส่วนตัวที่ได้รับ" />
-    <p class="hint">รหัสเริ่มต้น 123456 และการเลือกชื่อไม่ใช่หลักฐานยืนยันตัวตน รหัสเปิดบัญชีต้องเป็นรหัสเฉพาะบุคคลที่ส่งมอบอย่างปลอดภัย</p>
+    <p class="hint">กรุณาตั้ง PIN ส่วนตัวหลังเข้าสู่ระบบด้วย PIN ชั่วคราวเฉพาะบัญชีที่ผู้ดูแลออกให้แล้ว (อายุ 15 วัน)</p>
     <div id="v36FirstPinMessage" role="status" aria-live="polite"></div>
     <div class="v36-actions">
       <button id="v36Cancel" type="button" class="btn-secondary">ยกเลิก</button>
@@ -811,17 +808,17 @@
       <button id="wViewAccounts" type="button" aria-pressed="false" data-view="accounts">🛡️ จัดการบัญชี</button>
     </nav>
     <div id="v3AdminInviteBox" class="card hidden">
-      <h2>จัดการการเปิดใช้บัญชีครู</h2>
+      <h2>จัดการ PIN ชั่วคราวสำหรับครูและผู้บริหาร</h2>
       <label for="v3InvitePersonnel">เลือกครูหรือผู้บริหาร</label>
       <select id="v3InvitePersonnel"></select>
-      <button type="button" id="v3BulkPrepare" class="btn-primary">เตรียมลิงก์เปิดบัญชีครั้งแรกสำหรับครูที่ยังไม่มี PIN</button>
+      <button type="button" id="v3BulkPrepare" class="btn-primary hidden" disabled>ปิดการออก PIN รวม</button>
       <p id="v3BulkStatus" class="hint" aria-live="polite"></p>
       <div id="v3BulkLinks" class="hidden"></div>
-      <button type="button" id="v3GenerateInvite" class="btn-primary">🔗 สร้างลิงก์เฉพาะราย</button>
-      <input type="text" id="v3InviteLink" readonly placeholder="ลิงก์เปิดใช้จะปรากฏที่นี่">
-      <button type="button" id="v3CopyInvite" class="btn-secondary">📋 คัดลอกลิงก์</button>
+      <button type="button" id="v3GenerateInvite" class="btn-primary">🔑 ออก PIN ชั่วคราวเฉพาะราย (15 วัน)</button>
+      <input type="text" id="v3InviteLink" readonly autocomplete="off" placeholder="PIN ชั่วคราวจะแสดงที่นี่ครั้งเดียว">
+      <button type="button" id="v3CopyInvite" class="btn-secondary">📋 คัดลอก PIN ชั่วคราว</button>
       <button type="button" id="v3AdminReset" class="btn-secondary">♻️ รีเซตบัญชีที่เลือก</button>
-      <p class="hint">ส่งลิงก์ส่วนตัวให้เจ้าของบัญชีโดยตรง ไม่ส่งในกลุ่มรวม</p>
+      <p class="hint">Admin ต้องตรวจสอบตัวบุคคลก่อนส่งมอบ PIN ชั่วคราวเฉพาะราย ห้ามใช้รหัส Admin เป็น PIN ของครู</p>
     </div>
     <div id="v3RecoveryNotice" class="card hidden">
       <h2>บันทึกรหัสกู้คืนส่วนตัว</h2>
@@ -1711,19 +1708,9 @@ async function loadLoginStaffRoster(){
 /* Also handle a private link pasted into an already-open Login tab:
    a fragment-only navigation does not reload the document. */
 function consumePrivateActivationHash(){
-  if(!loginRosterReady||state.staffCode)return;
-  var match=location.hash.match(/^#activate=([^\.]+)\.(.+)$/);
-  if(!match)return;
-  var id=decodeURIComponent(match[1]),token=decodeURIComponent(match[2]);
-  var person=loginStaffRoster.find(function(x){return x.id===id;});
-  history.replaceState(null,'',location.pathname+location.search);
-  if(person){
-    chooseLoginPerson(person);
-    $('v3ActivationCode').value=token;
-    showMsg($('loginMsg'),'ตรวจพบลิงก์เปิดบัญชีส่วนตัวแล้ว กรุณากรอก PIN เริ่มต้นและเข้าสู่ขั้นตอนตั้ง PIN ใหม่','ok');
-    $('staffCode').focus({preventScroll:true});
-  }else{
-    showMsg($('loginMsg'),'บัญชีในลิงก์ไม่อยู่ในรายชื่อผู้มีสิทธิ์ กรุณาติดต่อผู้ดูแล','err');
+  if(location.hash.startsWith('#activate=')){
+    history.replaceState(null,'',location.pathname+location.search);
+    showMsg($('loginMsg'),'ระบบเลิกใช้ลิงก์เปิดบัญชีแล้ว กรุณาขอ PIN ชั่วคราวเฉพาะรายจาก Admin','warn');
   }
 }
 window.addEventListener('hashchange',consumePrivateActivationHash);
@@ -1806,10 +1793,6 @@ async function doLogin() {
     showMsg($('loginMsg'),'กรุณากรอก PIN 6 หลัก','err');return;
   }
   if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเข้าใช้งาน','err');return;}
-  if(!isAdmin&&code==='123456'){
-    if(!v36OpenDialog())showMsg($('loginMsg'),'ไม่สามารถเริ่มขั้นตอนตั้ง PIN ได้ กรุณาเลือกชื่อใหม่','err');
-    return;
-  }
   loginInFlight=true;
   var seq=++loginSequence;
   var started=performance.now();
@@ -1817,21 +1800,21 @@ async function doLogin() {
   busy(btn,true,'กำลังยืนยันสิทธิ์…');
   var r;
   try{r=await call(isAdmin?'fastAuth':'pinSignIn',
-    isAdmin?[code,'admin']:[personId,code,$('v3ActivationCode').value.trim()]);}
+    isAdmin?[code,'admin']:[personId,code]);}
   catch(e){r={ok:false,error:{message:'ติดต่อระบบตรวจรหัสไม่ได้'}};}
   finally{loginInFlight=false;busy(btn,false);}
   if(seq!==loginSequence)return;
   if(!r || !r.ok){
     var message=(r&&r.error&&r.error.message)||'เข้าสู่ระบบไม่สำเร็จ';
     if(!isAdmin&&r&&r.error&&r.error.code==='INVITATION_REQUIRED'){
-      message='ต้องใช้ลิงก์เปิดบัญชีเฉพาะตัวก่อนตั้ง PIN ครั้งแรก: ให้ผู้ดูแลเข้า 🛡️ จัดการบัญชี → เลือกชื่อ → 🔗 สร้างลิงก์เฉพาะราย แล้วส่งลิงก์ทาง LINE ส่วนตัว เมื่อเปิดลิงก์จึงใช้ PIN เริ่มต้นและตั้ง PIN ใหม่ได้';
+      message='บัญชีนี้ยังไม่มี PIN ชั่วคราวที่ออกโดยผู้ดูแล กรุณาติดต่อผู้ดูแลระบบ';
     }
     showMsg($('loginMsg'),message,'err');
     return;
   }
   if(!isAdmin&&r.data&&r.data.firstChangeRequired){
     v3PendingSetup={id:personId,token:r.data.setupToken};
-    $('staffCode').value='123456';v36OpenDialog();
+    $('staffCode').value='';v36OpenDialog();
     return;
   }
   var sessionCredential=isAdmin?code:String((r.data&&r.data.sessionToken)||'');
@@ -1868,21 +1851,18 @@ async function doLogin() {
    without a valid server-side person-bound, one-time enrollment credential. */
 var v36Saving=false;
 function v36ClearDialog(){
-  ['v36NewPin','v36ConfirmPin','v36ProofCode'].forEach(function(id){$(id).value='';});
+  ['v36NewPin','v36ConfirmPin'].forEach(function(id){$(id).value='';});
   $('v36FirstPinMessage').textContent='';
 }
 function v36OpenDialog(){
-  if(loginAccessMode!=='staff'||!$('loginPersonnelId').value||loginInFlight||
-     $('staffCode').value.trim()!=='123456'||state.staffCode)return false;
+  if(loginAccessMode!=='staff'||!v3PendingSetup||v3PendingSetup.id!==$('loginPersonnelId').value||state.staffCode)return false;
   if(!$('v36FirstPinDialog').open){
     v36ClearDialog();
-    $('v36ProofCode').value=$('v3ActivationCode').value.trim();
     $('v36FirstPinDialog').showModal();
     $('v36NewPin').focus();
   }
   return true;
 }
-$('staffCode').addEventListener('input',function(){if(this.value==='123456')v36OpenDialog();});
 function v36AbortEnrollment(){
   if($('v36FirstPinDialog').open)$('v36FirstPinDialog').close();
   v36ClearDialog();v3PendingSetup=null;
@@ -1895,29 +1875,22 @@ $('v36FirstPinDialog').addEventListener('cancel',function(e){
 $('v36Save').addEventListener('click',async function(){
   if(v36Saving)return;
   var id=$('loginPersonnelId').value,newPin=$('v36NewPin').value,
-      repeated=$('v36ConfirmPin').value,proof=$('v36ProofCode').value.trim();
+      repeated=$('v36ConfirmPin').value;
   if(!/^[0-9]{6}$/.test(newPin)||newPin==='123456'||newPin!==repeated){
-    $('v36FirstPinMessage').textContent='กรุณาตั้ง PIN ใหม่ 6 หลักที่ไม่ใช่ 123456 และยืนยันให้ตรงกัน';return;
+    $('v36FirstPinMessage').textContent='กรุณาตั้ง PIN ส่วนตัวใหม่ 6 หลักและยืนยันให้ตรงกัน';return;
   }
-  if(!proof&&!v3PendingSetup){
-    $('v36FirstPinMessage').textContent='ยังไม่สามารถเปิดบัญชีได้: ต้องมีรหัสเปิดบัญชีเฉพาะบุคคลที่ส่งมอบถึงเจ้าของบัญชีแล้ว';
-    return;
+  var pending=v3PendingSetup;
+  if(!pending||pending.id!==id||!pending.token){
+    $('v36FirstPinMessage').textContent='กรุณากลับไปเข้าสู่ระบบด้วย PIN ชั่วคราวที่ได้รับจาก Admin';return;
   }
-  v36Saving=true;busy(this,true,'กำลังตรวจสอบรหัส…');
+  v36Saving=true;busy(this,true,'กำลังบันทึก PIN…');
   try{
-    var token=v3PendingSetup&&v3PendingSetup.id===id?v3PendingSetup.token:'';
-    if(!token){
-      var proofResult=await call('pinSignIn',[id,'123456',proof]);
-      if(!proofResult?.ok||!proofResult.data?.firstChangeRequired){
-        $('v36FirstPinMessage').textContent='รหัสเปิดบัญชีไม่ถูกต้อง หมดอายุ หรือบัญชีนี้เปิดใช้แล้ว';return;
-      }
-      token=proofResult.data.setupToken;
-    }
-    var completed=await call('pinCompleteFirstChange',[id,token,newPin]);
+    var completed=await call('pinCompleteFirstChange',[id,pending.token,newPin]);
     if(!completed?.ok){
       $('v36FirstPinMessage').textContent=completed?.error?.message||'ยังไม่สามารถบันทึก PIN ได้';return;
     }
-    $('v36FirstPinDialog').close();v36ClearDialog();v3PendingSetup=null;v3CompleteStaffSession(completed.data);
+    $('v36FirstPinDialog').close();v36ClearDialog();v3PendingSetup=null;
+    v3CompleteStaffSession(completed.data);
   }finally{v36Saving=false;busy($('v36Save'),false);}
 });
 
@@ -1962,15 +1935,16 @@ $('v3ResetPin').addEventListener('click',async function(){
   if(!id){showMsg($('loginMsg'),'กรุณาเลือกชื่อก่อน','err');return;}
   var r=await call('pinSelfReset',[id,$('v3RecoveryCode').value.trim()]);
   if(!r||!r.ok){showMsg($('loginMsg'),r?.error?.message||'ไม่สามารถรีเซต PIN ได้','err');return;}
-  $('v3ActivationCode').value=r.data.invitationCode;
   $('v3RecoveryControls').classList.add('hidden');
-  $('staffCode').value='123456';$('staffCode').focus();
-  showMsg($('loginMsg'),'กรุณากดเข้าสู่ระบบเพื่อเปลี่ยน PIN ใหม่','warn');
+  $('v3RecoveryCode').value='';
+  $('staffCode').value='';
+  await t3Alert('ออก PIN ชั่วคราวใหม่แล้ว (ใช้ได้ 15 วัน): '+String(r.data.temporaryPin||'')+' กรุณาเก็บไว้เป็นความลับและใช้เข้าสู่ระบบเพื่อตั้ง PIN ใหม่');
+  $('staffCode').focus();
 });
 /* Admin-only, one click. One-use private links must be sent individually. */
 $('v3BulkPrepare').addEventListener('click',async function(){
   if(!state.adminCode)return;
-  if(!await t3Confirm('เตรียมลิงก์ส่วนตัวให้ครูที่ยังไม่มี PIN ใช่หรือไม่?'))return;
+  if(!await t3Confirm('ระบบปิดการออก PIN รวม กรุณาออก PIN เฉพาะรายผ่าน Admin'))return;
   var button=this;
   button.disabled=true;
   $('v3BulkStatus').textContent='กำลังเตรียมลิงก์สำหรับบัญชีที่ยังไม่มี PIN…';
@@ -1989,8 +1963,7 @@ $('v3BulkPrepare').addEventListener('click',async function(){
       copy.addEventListener('click',async function(){
         try{
           await navigator.clipboard.writeText(person.url);
-          $('v3BulkStatus').textContent='คัดลอกลิงก์ของ '+person.name+
-             ' แล้ว กรุณาส่งทาง LINE ส่วนตัวให้เจ้าของบัญชี';
+          $('v3BulkStatus').textContent='คัดลอกแล้ว';
         }catch(err){$('v3BulkStatus').textContent='คัดลอกไม่สำเร็จ กรุณาลองอีกครั้ง';}
       });
       line.appendChild(label);line.appendChild(copy);holder.appendChild(line);
@@ -2002,17 +1975,20 @@ $('v3BulkPrepare').addEventListener('click',async function(){
 
 $('v3GenerateInvite').addEventListener('click',async function(){
   if(!state.adminCode)return;
-  var r=await call('v3AdminIssueInvitation',[state.adminCode,$('v3InvitePersonnel').value]);
-  if(!r||!r.ok){await t3Alert(r?.error?.message||'ไม่สามารถสร้างลิงก์ได้');return;}
-  $('v3InviteLink').value=r.data.activationLink;
+  var id=$('v3InvitePersonnel').value;
+  if(!id||!await t3Confirm('ยืนยันว่า Admin ตรวจตัวบุคคลแล้วและต้องการออก PIN ชั่วคราวเฉพาะบัญชีนี้?'))return;
+  var r=await call('v3AdminIssueInvitation',[state.adminCode,id]);
+  if(!r||!r.ok){await t3Alert(r?.error?.message||'ไม่สามารถออก PIN ชั่วคราวได้');return;}
+  $('v3InviteLink').value=String(r.data.temporaryPin||'');
+  await t3Alert('ออก PIN ชั่วคราวอายุ 15 วันเรียบร้อย ส่งมอบให้เจ้าของบัญชีที่ตรวจสอบตัวตนแล้วเท่านั้น');
 });
 $('v3AdminReset').addEventListener('click',async function(){
   if(!state.adminCode)return;
   if(!await t3Confirm('รีเซตบัญชีที่เลือกและยกเลิก Session เดิม?'))return;
   var r=await call('pinAdminReset',[state.adminCode,$('v3InvitePersonnel').value]);
   if(!r||!r.ok){await t3Alert(r?.error?.message||'ไม่สามารถรีเซตบัญชีได้');return;}
-  $('v3InviteLink').value='https://matra16.github.io/t3-academic-memo-webapp/#activate='+
-     encodeURIComponent($('v3InvitePersonnel').value)+'.'+encodeURIComponent(r.data.invitationCode);
+  $('v3InviteLink').value=String(r.data.temporaryPin||'');
+  await t3Alert('รีเซตบัญชีแล้ว: PIN ชั่วคราวใหม่มีอายุ 15 วัน ส่งมอบให้เจ้าของบัญชีที่ตรวจสอบตัวตนแล้วเท่านั้น');
 });
 $('v3CopyInvite').addEventListener('click',function(){
   if($('v3InviteLink').value)navigator.clipboard.writeText($('v3InviteLink').value);
@@ -2458,6 +2434,8 @@ function doLogout() {
   $('v3RecoveryNotice').classList.add('hidden');
   $('v3FirstChangeControls').classList.add('hidden');
   $('v3ActivationCode').value='';
+  $('v3InviteLink').value='';
+  $('v3RecoveryShown').value='';
   $('v3RecoveryControls').classList.add('hidden');
   v3PendingSetup=null;
 }
