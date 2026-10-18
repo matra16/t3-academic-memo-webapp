@@ -740,6 +740,19 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
   padding:7px 10px;margin:5px 0 8px!important;
   font-weight:700;font-size:.88rem;line-height:1.4;
 }
+
+#adminStaffPicker{position:relative;grid-column:1/-1;min-width:0}
+#adminStaffSearch{width:100%!important;min-height:48px;margin:3px 0!important}
+#v3InvitePersonnel.hidden{display:none!important}
+#adminStaffChoices.admin-choices:not(.hidden){display:block!important;position:absolute;
+  top:100%;left:0;right:0;z-index:110;max-height:min(35dvh,260px);overflow:auto;
+  background:#fff;color:#173b35;border:1px solid #8db4ad;
+  border-radius:9px;box-shadow:0 9px 20px rgba(0,0,0,.18)}
+#adminStaffChoices .admin-choice{display:block;width:100%;background:#fff;color:#193d38;
+ text-align:left;font-size:.94rem;min-height:42px;padding:8px 12px;
+ border:0;border-bottom:1px solid #e0e9e6;cursor:pointer}
+#adminStaffChoices .admin-choice:hover,#adminStaffChoices .admin-choice:focus{
+ background:#d9eeea;color:#173b35;outline:2px solid #278279}
 </style>
 </head>
 <body>
@@ -817,7 +830,7 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
       <div id="adminLoginFields" class="hidden">
         <input id="loginUsername" type="hidden" value="admin">
         <label for="adminLoginCode">รหัสผู้ดูแลระบบ</label>
-        <input type="password" id="adminLoginCode" autocomplete="current-password"
+        <input type="password" id="adminLoginCode" autocomplete="off" spellcheck="false"
                placeholder="กรอกรหัสผู้ดูแลระบบ" enterkeyhint="go">
         <button id="switchToStaff" type="button" class="btn-secondary"
                 style="margin-top:10px">กลับไปเลือกชื่อครูและผู้บริหาร</button>
@@ -866,19 +879,23 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
     </nav>
     <div id="v3AdminInviteBox" class="card hidden">
       <h2>จัดการ PIN ชั่วคราวสำหรับครูและผู้บริหาร</h2>
-      <label for="adminStaffSearch">ค้นหาครูหรือผู้บริหาร</label>
-      <input id="adminStaffSearch" type="search" autocomplete="off" spellcheck="false"
-        placeholder="🔎 พิมพ์ชื่อหรือนามสกุล ระบบแสดงผลทันที"
-        aria-controls="v3InvitePersonnel" aria-describedby="adminStaffSearchStatus">
-      <p id="adminStaffSearchStatus" class="hint" role="status" aria-live="polite">พิมพ์เพื่อค้นหาจากรายชื่อที่โหลดแล้ว</p>
-      <label for="v3InvitePersonnel">เลือกรายชื่อที่พบ</label>
-      <select id="v3InvitePersonnel"></select>
+      <label for="adminStaffSearch">เลือกครูหรือผู้บริหาร</label>
+      <div id="adminStaffPicker" class="admin-combobox">
+        <input id="adminStaffSearch" type="search" autocomplete="off" spellcheck="false"
+          placeholder="🔎 พิมพ์ชื่อหรือคลิกเพื่อเลือก"
+          role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
+          aria-expanded="false" aria-controls="adminStaffChoices"
+          aria-describedby="adminStaffSearchStatus">
+        <div id="adminStaffChoices" class="admin-choices hidden" role="listbox" aria-label="รายชื่อครูและผู้บริหาร"></div>
+      </div>
+      <p id="adminStaffSearchStatus" class="hint" role="status" aria-live="polite">พิมพ์หรือคลิกเพื่อค้นหา</p>
+      <select id="v3InvitePersonnel" class="hidden" aria-hidden="true" tabindex="-1"></select>
       <button type="button" id="v3BulkPrepare" class="btn-primary hidden" disabled>ปิดการออก PIN รวม</button>
       <p id="v3BulkStatus" class="hint" aria-live="polite"></p>
       <div id="v3BulkLinks" class="hidden"></div>
       <button type="button" id="v3GenerateInvite" class="btn-primary">🔑 ออก PIN ชั่วคราวเฉพาะราย (15 วัน)</button>
       <input type="text" id="v3InviteLink" readonly autocomplete="off" placeholder="PIN ชั่วคราวจะแสดงที่นี่ครั้งเดียว">
-      <button type="button" id="v3CopyInvite" class="btn-secondary">📋 คัดลอก PIN ชั่วคราว</button>
+      <button type="button" id="v3CopyInvite" class="btn-secondary">📋 คัดลอกข้อความส่งมอบพร้อมชื่อ</button>
       <button type="button" id="v3AdminReset" class="btn-secondary">♻️ รีเซตบัญชีที่เลือก</button>
       <p class="hint">Admin ต้องตรวจสอบตัวบุคคลก่อนส่งมอบ PIN ชั่วคราวเฉพาะราย ห้ามใช้รหัส Admin เป็น PIN ของครู</p>
     </div>
@@ -1788,13 +1805,16 @@ function changeLoginAccessMode(mode){
   $('staffLoginFields').classList.toggle('hidden',loginAccessMode==='admin');
   $('adminLoginFields').classList.toggle('hidden',loginAccessMode!=='admin');
   closeLoginSuggestions();
+  $('adminLoginCode').value='';
   if(loginAccessMode==='admin'){
     $('loginUsername').value='admin';
+    $('staffCode').value='';
     $('adminLoginCode').focus({preventScroll:true});
-  }else{
-    $('adminLoginCode').value='';
-    $('loginPersonnelSearch').focus({preventScroll:true});
-  }
+    requestAnimationFrame(function(){
+      if(!state.staffCode&&loginAccessMode==='admin'&&!$('loginCard').classList.contains('hidden'))
+        $('adminLoginCode').focus({preventScroll:true});
+    });
+  }else $('loginPersonnelSearch').focus({preventScroll:true});
 }
 function onLoginPersonnelTextChange(){
   var id=$('loginPersonnelId');
@@ -2076,7 +2096,13 @@ $('v3BulkPrepare').addEventListener('click',async function(){
 // Admin instant local search: normalized directory is indexed ONCE per snapshot,
  // then filtered synchronously on every keystroke. No RPC on each input event.
 var adminStaffDirectory=[],adminStaffFiltered=[],adminDirectoryReady=false;
+var adminChosenPersonId='',adminOptionIndex=0;
+function closeAdminStaffChoices(){
+  $('adminStaffChoices').classList.add('hidden');
+  $('adminStaffSearch').setAttribute('aria-expanded','false');
+}
 function setAdminStaffDirectory(people,canonical){
+  if(!canonical&&adminDirectoryReady&&adminStaffDirectory.length)return;
   var seen=new Set(),result=[];
   (Array.isArray(people)?people:[]).forEach(function(p){
     if(!p||!p.id||!p.name||seen.has(String(p.id)))return;
@@ -2084,38 +2110,94 @@ function setAdminStaffDirectory(people,canonical){
     result.push({id:String(p.id),name:String(p.name),key:loginNameKey(p.name)});
   });
   result.sort(function(a,b){return a.name.localeCompare(b.name,'th');});
-  if(!result.length && adminStaffDirectory.length && !canonical)return;
+  if(!result.length&&adminStaffDirectory.length&&!canonical)return;
   adminStaffDirectory=result;
   adminDirectoryReady=canonical===true;
-  $('v3GenerateInvite').disabled=!adminDirectoryReady;
-  $('v3AdminReset').disabled=!adminDirectoryReady;
+  if(adminChosenPersonId&&!result.some(function(p){return p.id===adminChosenPersonId;})){
+    adminChosenPersonId='';$('v3InviteLink').value='';
+  }
+  var enabled=adminDirectoryReady&&!!adminChosenPersonId;
+  $('v3GenerateInvite').disabled=!enabled;
+  $('v3AdminReset').disabled=!enabled;
   renderAdminStaffMatches();
 }
-function renderAdminStaffMatches(){
-  var select=$('v3InvitePersonnel'),previousId=select.value;
-  var query=loginNameKey($('adminStaffSearch').value);
-  // A tiny capped DOM minimizes layout work even on long school rosters.
-  var matched=adminStaffDirectory.filter(function(p){return !query||p.key.includes(query);});
-  adminStaffFiltered=matched;
-  select.textContent='';
-  matched.slice(0,60).forEach(function(p){
-    var option=document.createElement('option');
-    option.value=p.id;option.textContent=p.name;select.appendChild(option);
-  });
-  if(matched.some(function(p){return p.id===previousId;}))select.value=previousId;
-  if(!matched.length)select.value='';
-  // Preserve an already-issued code while searching the same selected person.
-  if(previousId && previousId!==select.value)$('v3InviteLink').value='';
-  $('adminStaffSearchStatus').textContent=matched.length
-    ? 'พบ '+matched.length+' รายชื่อ'+(matched.length>60?' · แสดง 60 ชื่อแรก กรุณาพิมพ์เพิ่ม':'')+
-      (adminDirectoryReady?'':' · แสดงรายชื่อที่โหลดไว้ก่อน')
-    : (adminStaffDirectory.length?'ไม่พบรายชื่อที่ค้นหา':'กำลังโหลดรายชื่อจากระบบ…');
+function chooseAdminStaff(p){
+  if(!p)return;
+  if(adminChosenPersonId!==p.id)$('v3InviteLink').value='';
+  adminChosenPersonId=p.id;
+  $('adminStaffSearch').value=p.name;
+  var sel=$('v3InvitePersonnel');sel.textContent='';
+  var opt=document.createElement('option');opt.value=p.id;opt.textContent=p.name;
+  sel.appendChild(opt);sel.value=p.id;
+  closeAdminStaffChoices();
+  $('adminStaffSearch').focus({preventScroll:true});
+  $('v3GenerateInvite').disabled=!adminDirectoryReady;
+  $('v3AdminReset').disabled=!adminDirectoryReady;
+  $('adminStaffSearchStatus').textContent=adminDirectoryReady?'เลือกแล้ว: '+p.name:'กำลังยืนยันรายชื่อ…';
 }
-$('adminStaffSearch').addEventListener('input',renderAdminStaffMatches);
-$('v3InvitePersonnel').addEventListener('change',function(){$('v3InviteLink').value='';});
+function renderAdminStaffMatches(){
+  var query=loginNameKey($('adminStaffSearch').value),box=$('adminStaffChoices');
+  var matches=adminStaffDirectory.filter(function(p){return !query||p.key.includes(query);});
+  adminStaffFiltered=matches;
+  var frag=document.createDocumentFragment();
+  matches.slice(0,40).forEach(function(p){
+    var b=document.createElement('button');b.type='button';b.className='admin-choice';
+    b.setAttribute('role','option');b.textContent=p.name;
+    b.addEventListener('pointerdown',function(ev){ev.preventDefault();});
+    b.addEventListener('click',function(){chooseAdminStaff(p);});
+    frag.appendChild(b);
+  });
+  box.replaceChildren(frag);adminOptionIndex=0;
+  $('adminStaffSearchStatus').textContent=adminChosenPersonId
+    ? ('เลือกแล้ว: '+$('adminStaffSearch').value)
+    : (matches.length?'พบ '+matches.length+' รายชื่อ'+(matches.length>40?' กรุณาพิมพ์ต่อ':'')
+      : (adminStaffDirectory.length?'ไม่พบรายชื่อ':'กำลังโหลดรายชื่อจาก Server…'));
+}
+function openAdminStaffChoices(){
+  renderAdminStaffMatches();$('adminStaffChoices').classList.remove('hidden');
+  $('adminStaffSearch').setAttribute('aria-expanded','true');
+}
+$('adminStaffSearch').addEventListener('focus',openAdminStaffChoices);
+$('adminStaffSearch').addEventListener('click',openAdminStaffChoices);
+$('adminStaffSearch').addEventListener('input',function(){
+  var current=adminStaffDirectory.find(function(p){return p.id===adminChosenPersonId;});
+  if(!current||loginNameKey(current.name)!==loginNameKey(this.value)){
+    adminChosenPersonId='';$('v3InvitePersonnel').textContent='';
+    $('v3InviteLink').value='';$('v3GenerateInvite').disabled=true;$('v3AdminReset').disabled=true;
+  }
+  openAdminStaffChoices();
+});
+$('adminStaffSearch').addEventListener('keydown',function(ev){
+  var choices=$('adminStaffChoices').querySelectorAll('[role="option"]');
+  if(ev.key==='Escape'){ev.preventDefault();closeAdminStaffChoices();return;}
+  if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){
+    ev.preventDefault();
+    if($('adminStaffChoices').classList.contains('hidden')){openAdminStaffChoices();return;}
+    if(!choices.length)return;
+    adminOptionIndex=(adminOptionIndex+(ev.key==='ArrowDown'?1:-1)+choices.length)%choices.length;
+    choices[adminOptionIndex].focus();return;
+  }
+  if(ev.key==='Enter'&&!ev.isComposing&&choices.length&&!$('adminStaffChoices').classList.contains('hidden')){
+    ev.preventDefault();choices[adminOptionIndex].click();
+  }
+});
+$('adminStaffChoices').addEventListener('keydown',function(ev){
+  var buttons=this.querySelectorAll('[role="option"]');
+  var i=Array.prototype.indexOf.call(buttons,document.activeElement);
+  if(ev.key==='Escape'){ev.preventDefault();closeAdminStaffChoices();$('adminStaffSearch').focus();return;}
+  if((ev.key==='ArrowDown'||ev.key==='ArrowUp')&&buttons.length){
+    ev.preventDefault();adminOptionIndex=(i+(ev.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length;
+    buttons[adminOptionIndex].focus();return;
+  }
+  if(ev.key==='Enter'&&i>=0){ev.preventDefault();buttons[i].click();}
+});
+document.addEventListener('pointerdown',function(ev){
+  if(!$('adminStaffPicker').contains(ev.target))closeAdminStaffChoices();
+});
 $('v3GenerateInvite').addEventListener('click',async function(){
   if(!state.adminCode||!adminDirectoryReady)return;
   var id=$('v3InvitePersonnel').value;
+  if(id!==adminChosenPersonId)return;
   if(!id||!adminStaffDirectory.some(function(p){return p.id===id;}))return;
   if(!await t3Confirm('ยืนยันว่า Admin ตรวจตัวบุคคลแล้วและต้องการออก PIN ชั่วคราวเฉพาะบัญชีนี้?'))return;
   var r=await call('v3AdminIssueInvitation',[state.adminCode,id]);
@@ -2126,6 +2208,7 @@ $('v3GenerateInvite').addEventListener('click',async function(){
 $('v3AdminReset').addEventListener('click',async function(){
   if(!state.adminCode||!adminDirectoryReady)return;
   var chosen=$('v3InvitePersonnel').value;
+  if(chosen!==adminChosenPersonId)return;
   if(!chosen||!adminStaffDirectory.some(function(p){return p.id===chosen;}))return;
   if(!await t3Confirm('รีเซตบัญชีที่เลือกและยกเลิก Session เดิม?'))return;
   var r=await call('pinAdminReset',[state.adminCode,chosen]);
@@ -2134,7 +2217,11 @@ $('v3AdminReset').addEventListener('click',async function(){
   await t3Alert('รีเซตบัญชีแล้ว: PIN ชั่วคราวใหม่มีอายุ 15 วัน ส่งมอบให้เจ้าของบัญชีที่ตรวจสอบตัวตนแล้วเท่านั้น');
 });
 $('v3CopyInvite').addEventListener('click',function(){
-  if($('v3InviteLink').value)navigator.clipboard.writeText($('v3InviteLink').value);
+  var code=$('v3InviteLink').value;
+  var item=adminStaffDirectory.find(function(p){return p.id===adminChosenPersonId;});
+  if(!state.adminCode||!code||!item)return;
+  var message='เรียน '+item.name+'\nรหัสชั่วคราวสำหรับเข้าใช้งานทะเบียนเลขบันทึกข้อความ: '+code+'\nรหัสมีอายุ 15 วัน โปรดเปลี่ยนเป็นรหัสส่วนตัวเมื่อเข้าใช้ครั้งแรก และอย่าส่งต่อบุคคลอื่น';
+  navigator.clipboard.writeText(message);
 });
 $('v3CopyRecovery').addEventListener('click',function(){
   navigator.clipboard.writeText($('v3RecoveryShown').value);
@@ -2623,8 +2710,8 @@ function doLogout() {
   $('v3InviteLink').value='';
   $('adminStaffSearch').value='';
   $('adminStaffSearchStatus').textContent='';
-  adminStaffDirectory=[];adminStaffFiltered=[];
-  $('v3InvitePersonnel').textContent='';
+  adminStaffDirectory=[];adminStaffFiltered=[];adminDirectoryReady=false;adminChosenPersonId='';
+  closeAdminStaffChoices();$('v3InvitePersonnel').textContent='';
   $('v3RecoveryShown').value='';
   $('v3RecoveryRevealBtn').classList.add('hidden');
   $('v3RecoveryNotice').classList.add('hidden');
