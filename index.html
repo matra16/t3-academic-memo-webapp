@@ -686,6 +686,48 @@
 #adminStaffSearch{display:block;width:100%;min-height:46px;margin:6px 0 2px}
 #adminStaffSearchStatus{margin:3px 0 8px}
 #v3InvitePersonnel{width:100%;min-height:46px}
+
+/* V3.11: one unified workflow -- issue first, live register directly underneath. */
+body.workspace-ready #appBody[data-workspace-view="dashboard"]{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ grid-template-columns:none!important;grid-template-rows:none!important;
+ gap:10px!important;overflow-y:auto!important;overscroll-behavior:contain;
+ height:auto!important;max-height:calc(100dvh - 150px)!important;
+ padding-bottom:10px!important;scrollbar-width:thin;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"]>.workspace-nav{
+ display:flex!important;order:-2!important;flex:0 0 auto!important;
+}
+body.workspace-ready #wViewRegister{display:none!important}
+body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main{
+ display:block!important;order:0!important;flex:0 0 auto!important;
+ max-height:none!important;min-height:max-content!important;overflow:visible!important;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"]>.register-panel{
+ display:flex!important;order:1!important;flex:0 0 auto!important;
+ max-height:none!important;min-height:200px!important;overflow:visible!important;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"]>.register-panel .table-scroll{
+ display:block!important;flex:0 0 auto!important;
+ max-height:min(43dvh,440px)!important;overflow:auto!important;overscroll-behavior:contain;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"] #reloadRosterBtn{display:none!important}
+body.workspace-ready #appBody[data-workspace-view="dashboard"] #personnelSearch[readonly]{
+ background:#f1f7f5;color:#23504b;cursor:default;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"] #v3RecoveryRevealBtn:not(.hidden){
+ display:block!important;min-height:38px;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"] #v3RecoveryNotice:not(.hidden){
+ display:block!important;order:0;max-height:none!important;overflow:visible!important;
+}
+body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optional-fields{
+ display:block;
+}
+@media (max-width:789px), (max-height:729px){
+ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main{display:block!important}
+ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.register-panel{display:flex!important}
+}
 </style>
 </head>
 <body>
@@ -727,10 +769,10 @@
                role="listbox" aria-label="รายชื่อครูและผู้บริหาร"></div>
         </div>
         <p id="loginRosterStatus" class="hint" aria-live="polite"></p>
-        <label for="staffCode">PIN 6 หลัก</label>
+        <label for="staffCode">รหัส 6 หลัก</label>
         <input type="password" id="staffCode" inputmode="numeric" pattern="[0-9]{6}"
-               minlength="6" maxlength="6" autocomplete="current-password"
-               placeholder="_ _ _ _ _ _" aria-label="PIN 6 หลัก"
+               minlength="6" maxlength="6" autocomplete="one-time-code"
+               placeholder="_ _ _ _ _ _" aria-label="รหัส 6 หลัก"
                style="text-align:center;font-family:monospace;font-size:1.6rem;
                       letter-spacing:.25rem" enterkeyhint="go">
         <input id="v3ActivationCode" type="hidden" autocomplete="off" value="">
@@ -806,8 +848,8 @@
   <!-- ============ MAIN ============ -->
   <section id="appBody" class="hidden" data-workspace-view="dashboard">
     <nav id="workspaceNav" class="workspace-nav" aria-label="เลือกหน้าทำงาน">
-      <button id="wViewRegister" type="button" aria-pressed="true" data-view="register">📒 ทะเบียน</button>
-      <button id="wViewIssue" type="button" aria-pressed="false" data-view="issue">✍️ ออกเลข</button>
+      <button id="wViewRegister" type="button" class="hidden" aria-pressed="false" data-view="register">📒 ทะเบียน</button>
+      <button id="wViewIssue" type="button" aria-pressed="true" data-view="issue">✍️ ออกเลขและดูทะเบียน</button>
       <button id="wViewAccounts" type="button" aria-pressed="false" data-view="accounts">🛡️ จัดการบัญชี</button>
     </nav>
     <div id="v3AdminInviteBox" class="card hidden">
@@ -855,8 +897,8 @@
           aria-label="รายชื่อผู้บริหารและครู"></div>
       </div>
       <select id="personnel" class="hidden" aria-hidden="true" tabindex="-1"><option value=""></option></select>
-      <div class="hint" id="personnelStatus" aria-live="polite">กำลังโหลดรายชื่อผู้บริหารและครูจากฐานกลาง</div>
-      <button id="reloadRosterBtn" type="button" class="btn-ghost" style="margin-top:8px;min-height:44px">↻ อัปเดตรายชื่อ</button>
+      <div class="hint" id="personnelStatus" aria-live="polite">หลังเข้าสู่ระบบ ระบบจะเติมชื่อผู้ขอที่ยืนยันแล้วให้อัตโนมัติ</div>
+      <button id="reloadRosterBtn" type="button" class="btn-ghost hidden" style="margin-top:8px;min-height:44px">↻ อัปเดตรายชื่อ</button>
 
       <label for="subject">หัวข้อ / เรื่อง</label>
       <textarea id="subject" maxlength="180" placeholder="ระบุรายละเอียดหนังสือที่ต้องการ"></textarea>
@@ -888,6 +930,8 @@
         <textarea id="notes" maxlength="400" placeholder="ข้อมูลเพิ่มเติม"></textarea>
       </details>
       <div class="status" id="submitMsg" role="status" aria-live="polite"></div>
+      <button id="v3RecoveryRevealBtn" type="button" class="btn-ghost hidden"
+        style="margin-top:8px">🔑 ขอแสดงรหัสกู้คืนครั้งแรก</button>
 
       <div class="result-box hidden" id="resultBox">
         <div class="hint">เลขหมายหนังสือ</div>
@@ -908,7 +952,7 @@
 
     <div class="card register-panel">
       <div class="register-toolbar">
-        <h2>📒 ทะเบียนเลขบันทึกข้อความ</h2>
+        <h2>📒 ทะเบียนเลขบันทึกข้อความล่าสุด</h2>
         <div class="register-actions">
           <button id="historyOpen" class="btn-ghost" type="button">🔍 ค้นหาประวัติ</button>
           
@@ -917,7 +961,7 @@
       <div id="registerStatus" class="hint" aria-live="polite">กำลังโหลดทะเบียน</div>
       <div class="table-scroll">
         <table class="register-table">
-          <thead><tr><th>ลำดับ</th><th>เลขที่หนังสือเต็ม</th><th>วันที่</th><th>ผู้ขอ</th><th>เรื่อง</th><th>ประเภท</th><th class="admin-only hidden">จัดการ</th></tr></thead>
+          <thead><tr><th>ลำดับ</th><th>เลขที่หนังสือเต็ม</th><th>วันที่</th><th>ผู้ขอ</th><th>เรื่อง</th><th>ประเภท</th><th>การดำเนินการ</th></tr></thead>
           <tbody id="registerRows"></tbody>
         </table>
       </div>
@@ -1179,7 +1223,8 @@ function t3Notice(config) {
 function t3Confirm(message,opts){return t3Notice(Object.assign({kind:'confirm',message:message},opts||{}));}
 function t3Prompt(message,opts){return t3Notice(Object.assign({kind:'prompt',message:message},opts||{}));}
 function t3Alert(message,opts){return t3Notice(Object.assign({kind:'alert',message:message},opts||{}));}
-var state = { staffCode: '', boot: null, tokens: {}, adminCode: '' };
+var state = { staffCode: '', boot: null, tokens: {}, adminCode: '', currentPersonId:'' };
+var pendingRecoveryCode='';
 var registerRowsCache=[];var activeEditMemo=null;
 /* Browser-memory ONLY, 45-second validated-history cache. No credentials,
    staff master, or official register records are stored in LocalStorage. */
@@ -1516,10 +1561,15 @@ function fillPersonnel(list) {
     var o=document.createElement('option');o.value=p.id;setText(o,label);
     select.appendChild(o);
   });
-  if(activePersonnelById.has(previousId)){
-    select.value=previousId;
-    search.value=toThaiDigits(activePersonnelById.get(previousId).label);
+  var selfId=state.adminCode?'':state.currentPersonId;
+  var resolvedId=(selfId && activePersonnelById.has(selfId))?selfId:previousId;
+  if(activePersonnelById.has(resolvedId)){
+    select.value=resolvedId;
+    search.value=toThaiDigits(activePersonnelById.get(resolvedId).label);
   }else {select.value='';search.value='';}
+  // Signed-in staff can issue only for their own immutable PersonnelID.
+  search.readOnly=!!selfId;
+  search.setAttribute('aria-readonly',String(!!selfId));
   closeNameSuggestions();
   var requested=$('filterRequester').value;
   var filter=$('filterRequester');filter.textContent='';
@@ -1531,8 +1581,8 @@ function fillPersonnel(list) {
   filter.value=requested;
   rosterUpdatedAt=Date.now();
   setText($('personnelStatus'),staff.length
-    ? 'พิมพ์ชื่อหรือนามสกุลเพื่อค้นหา'
-    : 'ไม่พบรายชื่อ กรุณาอัปเดตรายชื่อหรือติดต่อผู้ดูแล');
+    ? (selfId?'ผู้ขอ: บัญชีที่ยืนยันตัวตนแล้ว':'พิมพ์ชื่อหรือนามสกุลเพื่อค้นหา')
+    : 'กำลังตรวจสอบชื่อผู้ขอจากทะเบียนบุคลากร…');
 }
 function fillCategories(cats) {
   var sel = $('category'); sel.textContent = '';
@@ -1594,7 +1644,7 @@ async function hydrateAfterLogin(code,seq) {
   hideMsg($('histMsg'));
   // getBootstrap already includes a verified recent register snapshot; avoid
   // a second identical Google Apps Script invocation on every login.
-  registerRowsCache=(r.data.history||[]).filter(function(m){return m&&m.Status==='ISSUED';});
+  registerRowsCache=(r.data.history||[]).filter(function(m){return m&&m.DocumentNo;});
   renderRegisterTable(registerRowsCache);
   setText($('loginPerf'),'รายชื่อและทะเบียนพร้อมใช้งานแล้ว');
 }
@@ -1783,6 +1833,10 @@ if(document.readyState==='loading'){
 
 async function doLogin() {
   if(loginInFlight)return;
+  pendingRecoveryCode='';
+  $('v3RecoveryShown').value='';
+  $('v3RecoveryNotice').classList.add('hidden');
+  $('v3RecoveryRevealBtn').classList.add('hidden');
   var isAdmin=loginAccessMode==='admin';
   var code=(isAdmin?$('adminLoginCode'):$('staffCode')).value.trim();
   var username=isAdmin?$('loginUsername').value.trim().toLowerCase():'';
@@ -1795,7 +1849,8 @@ async function doLogin() {
     $('loginPersonnelSearch').focus();return;
   }
   if(!isAdmin&&!/^[0-9]{6}$/.test(code)){
-    showMsg($('loginMsg'),'กรุณากรอก PIN 6 หลัก','err');return;
+    showMsg($('loginMsg'),'กรุณากรอกรหัส 6 หลัก','err');
+    $('staffCode').value='';$('staffCode').focus({preventScroll:true});return;
   }
   if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเข้าใช้งาน','err');return;}
   loginInFlight=true;
@@ -1815,7 +1870,8 @@ async function doLogin() {
       message='บัญชีนี้ยังไม่มี PIN ชั่วคราวที่ออกโดยผู้ดูแล กรุณาติดต่อผู้ดูแลระบบ';
     }
     showMsg($('loginMsg'),message,'err');
-    return;
+    var retry=isAdmin?$('adminLoginCode'):$('staffCode');
+    retry.value='';retry.focus({preventScroll:true});return;
   }
   if(!isAdmin&&r.data&&r.data.firstChangeRequired){
     v3PendingSetup={id:personId,token:r.data.setupToken};
@@ -1827,6 +1883,7 @@ async function doLogin() {
     showMsg($('loginMsg'),'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่','err');return;
   }
   state.staffCode=sessionCredential;state.boot=r.data;
+  state.currentPersonId=isAdmin?'':String((r.data&&r.data.personnelId)||personId||'');
   state.adminCode=(isAdmin&&r.data&&r.data.role==='ADMIN')?code:'';
   if(state.adminCode){
     document.body.classList.add('admin-active');
@@ -1848,7 +1905,11 @@ async function doLogin() {
     setAdminStaffDirectory(loginStaffRoster,false);
   }
   fillCategories(r.data.categories||[]);
-  fillPersonnel([]);
+  // First meaningful view uses the locally loaded verified-login roster.
+  // Server bootstrap later replaces this provisional view with canonical data.
+  fillPersonnel(state.currentPersonId
+    ? loginStaffRoster.filter(function(p){return p.id===state.currentPersonId;})
+    : []);
   renderChips(r.data);renderLatest(r.data);renderAccount(r.data);
   setupCurrentDate();
   setText($('loginPerf'),'เข้าสู่ระบบเรียบร้อย · กำลังเตรียมรายชื่อ');
@@ -1875,7 +1936,10 @@ function v36OpenDialog(){
 }
 function v36AbortEnrollment(){
   if($('v36FirstPinDialog').open)$('v36FirstPinDialog').close();
-  v36ClearDialog();v3PendingSetup=null;
+  v36ClearDialog();v3PendingSetup=null;pendingRecoveryCode='';
+  $('v3RecoveryShown').value='';
+  $('v3RecoveryRevealBtn').classList.add('hidden');
+  $('v3RecoveryNotice').classList.add('hidden');
   $('staffCode').value='';$('v3ActivationCode').value='';
 }
 $('v36Cancel').addEventListener('click',function(){v36AbortEnrollment();$('staffCode').focus();});
@@ -1904,11 +1968,19 @@ $('v36Save').addEventListener('click',async function(){
   }finally{v36Saving=false;busy($('v36Save'),false);}
 });
 
+$('v3RecoveryRevealBtn').addEventListener('click',function(){
+  if(!pendingRecoveryCode)return;
+  $('v3RecoveryShown').value=pendingRecoveryCode;
+  $('v3RecoveryNotice').classList.remove('hidden');
+  $('v3RecoveryRevealBtn').classList.add('hidden');
+  $('v3RecoveryNotice').scrollIntoView({block:'nearest',behavior:'smooth'});
+});
 /* Private activation and account recovery. */
 var v3PendingSetup=null;
 function v3CompleteStaffSession(data){
   if(!data || !data.sessionToken)return;
   state.staffCode=String(data.sessionToken);state.adminCode='';
+  state.currentPersonId=String(data.personnelId||$('loginPersonnelId').value||'');
   state.boot=data;document.body.classList.remove('admin-active');
   $('adminLock').classList.add('hidden');
   $('staffCode').value='';$('v3ActivationCode').value='';
@@ -1919,12 +1991,16 @@ function v3CompleteStaffSession(data){
   $('v3FirstChangeControls').classList.add('hidden');
   hideMsg($('loginMsg'));v3PendingSetup=null;
   fillCategories(data.categories||[]);
+  fillPersonnel(loginStaffRoster.filter(function(p){return p.id===state.currentPersonId;}));
   renderAccount(data);setupCurrentDate();
   initializeWorkspace();
   hydrateAfterLogin(state.staffCode,++loginSequence);
   if(data.recoveryCode){
-    $('v3RecoveryShown').value=String(data.recoveryCode);
-    $('v3RecoveryNotice').classList.remove('hidden');
+    // Recovery is one-use material. Do not expose it automatically in the dashboard.
+    pendingRecoveryCode=String(data.recoveryCode);
+    $('v3RecoveryShown').value='';
+    $('v3RecoveryNotice').classList.add('hidden');
+    $('v3RecoveryRevealBtn').classList.remove('hidden');
   }
 }
 $('v3CompletePin').addEventListener('click',async function(){
@@ -2051,7 +2127,9 @@ $('v3CopyRecovery').addEventListener('click',function(){
 });
 $('v3CloseRecovery').addEventListener('click',function(){
   $('v3RecoveryShown').value='';
+  pendingRecoveryCode='';
   $('v3RecoveryNotice').classList.add('hidden');
+  $('v3RecoveryRevealBtn').classList.add('hidden');
 });
 
 function ensureYearFilters(){
@@ -2143,19 +2221,19 @@ async function loadHistory(forceRefresh) {
    instead of hiding necessary controls to suppress scrollbars. */
 function setWorkspaceView(next){
   var app=$('appBody');
+  if(next==='issue'||next==='register')next='dashboard';
   var allowed={register:true,issue:true,accounts:!!state.adminCode,dashboard:true};
   if(!allowed[next])next='register';
   app.dataset.workspaceView=next;
   document.body.classList.toggle('workspace-dashboard',next==='dashboard');
   [['wViewRegister','register'],['wViewIssue','issue'],['wViewAccounts','accounts']].forEach(function(entry){
-    $(entry[0]).setAttribute('aria-pressed',String(entry[1]===next || (next==='dashboard'&&entry[1]==='register')));
+    $(entry[0]).setAttribute('aria-pressed',String(entry[1]===next || (next==='dashboard'&&entry[1]==='issue')));
   });
   fitResponsiveTypography();
 }
 function initializeWorkspace(){
   document.body.classList.add('workspace-ready');
-  var wide=innerWidth>=790&&innerHeight>=730;
-  setWorkspaceView(wide?'dashboard':'register');
+  setWorkspaceView('dashboard');
 }
 [['wViewRegister','register'],['wViewIssue','issue'],['wViewAccounts','accounts']].forEach(function(entry){
   $(entry[0]).addEventListener('click',function(){setWorkspaceView(entry[1]);});
@@ -2177,53 +2255,54 @@ window.addEventListener('resize',function(){
   adaptiveResizePending=true;
   requestAnimationFrame(function(){
     adaptiveResizePending=false;fitResponsiveTypography();
-    if(state.staffCode){
-      if(innerWidth<790||innerHeight<730){if($('appBody').dataset.workspaceView==='dashboard')setWorkspaceView('register');}
-      renderRegisterTable(registerRowsCache);
-    }
+    // CSS adapts register rows without reconstructing all table elements.
   });
 });
 fitResponsiveTypography();
 function renderRegisterTable(rows) {
   var tbody=$('registerRows');tbody.textContent='';
-  var valid=(rows||[]).filter(function(m){return m.DocumentNo && m.Status==='ISSUED';});
+  var valid=(rows||[]).filter(function(m){return m.DocumentNo && ['ISSUED','CANCEL_REQUESTED','CANCELLED'].includes(m.Status);});
   setText($('registerStatus'),valid.length
-    ? 'แสดงรายการที่ออกเลขแล้ว '+valid.length+' รายการ'
+    ? (state.adminCode?'ทะเบียนที่ออกเลขแล้ว ':'รายการเลขของบัญชีคุณ ') + valid.length+' รายการ'
     : 'ยังไม่มีเลขทะเบียนที่ออกแล้ว');
   if(!valid.length){
     var blank=document.createElement('tr'),cell=document.createElement('td');
-    cell.colSpan=state.adminCode?7:6;cell.textContent='ยังไม่มีเลขทะเบียนที่ออกแล้ว';
+    cell.colSpan=7;cell.textContent='ยังไม่มีเลขทะเบียนที่ออกแล้ว';
     blank.appendChild(cell);tbody.appendChild(blank);
   }
-  // Main dashboard is intentionally a fixed-height recent-register preview.
-  // The searchable history dialog contains the complete dataset.
-  var maxPreview=(window.innerWidth<900||window.innerHeight<740?1:2);
-  valid.slice(0,maxPreview).forEach(function(m){
+  // Show the complete verified bootstrap snapshot below the issue form.
+  // Historical filtering remains in the separate on-demand dialog.
+  valid.slice(0,50).forEach(function(m){
     var row=document.createElement('tr');
     [String(m.SerialNo||String(m.DocumentNo||'').split('/').pop()),m.DocumentNo,formatISOtoBE(m.RequestDateISO),m.RequesterDisplayName,
       m.Subject,m.Category].forEach(function(v){
       var td=document.createElement('td');setText(td,v||'');row.appendChild(td);
     });
-    if(state.adminCode){
-      var td=document.createElement('td');var actions=document.createElement('div');
+    var td=document.createElement('td');var actions=document.createElement('div');
+    if(state.adminCode && m.Status==='ISSUED'){
       actions.className='row-tools';
       var edit=document.createElement('button');edit.type='button';edit.className='btn-ghost';
       edit.textContent='✏️ แก้ไข';edit.addEventListener('click',function(){openEditMemo(m);});
       var remove=document.createElement('button');remove.type='button';remove.className='btn-danger';
       remove.textContent='🗑️ ลบ';remove.addEventListener('click',function(){deleteMemoByAdmin(m);});
       actions.appendChild(edit);actions.appendChild(remove);
-      td.appendChild(actions);row.appendChild(td);
+    }else if(m.Status==='ISSUED' && state.currentPersonId &&
+       String(m.RequesterPersonnelID||'')===state.currentPersonId){
+      var cancel=document.createElement('button');cancel.type='button';cancel.className='btn-ghost';
+      cancel.textContent='ขอยกเลิก';cancel.addEventListener('click',function(){openCancel(m);});
+      actions.appendChild(cancel);
     }
-    tbody.appendChild(row);
-  });
-  document.querySelectorAll('.register-table .admin-only').forEach(function(el){
-    el.classList.toggle('hidden',!state.adminCode);
+    if(m.Status!=='ISSUED'){
+      var status=document.createElement('span');status.textContent=statusThai(m.Status);
+      actions.appendChild(status);
+    }
+    td.appendChild(actions);row.appendChild(td);tbody.appendChild(row);
   });
 }
 async function loadRegister() {
   if(!state.staffCode)return;
   var r=await call('listMemoRequests',[state.staffCode,{
-    status:'ISSUED',limit:100,includeCancelled:false
+    status:'',limit:100,includeCancelled:true
   }]);
   if(!r || !r.ok){setText($('registerStatus'),'ไม่สามารถโหลดทะเบียนได้ กรุณาลองใหม่');return;}
   registerRowsCache=r.data.rows||[];
@@ -2442,8 +2521,9 @@ var r = await call('cancelMemoRequest', [{ staffCode: state.staffCode, memoId: m
     return;
   }
   delete state.tokens[memoId];
-  showMsg($('histMsg'), 'ส่งคำขอยกเลิกแล้ว รอผู้ดูแลระบบยืนยัน', 'ok');
-  await loadHistory();
+  showMsg($('submitMsg'), 'ส่งคำขอยกเลิกแล้ว รอผู้ดูแลระบบยืนยัน', 'ok');
+  await loadRegister();
+  if($('historyDialog').open)await loadHistory();
 }
 
 async function refreshBootstrap() {
@@ -2453,6 +2533,9 @@ async function refreshBootstrap() {
 
 function clearAndFocusLogin(){
   $('staffCode').value='';$('adminLoginCode').value='';
+  $('loginPersonnelSearch').value='';$('loginPersonnelId').value='';
+  $('v3RecoveryCode').value='';
+  closeLoginSuggestions();
   requestAnimationFrame(function(){
     if(!$('loginCard').classList.contains('hidden')){
       var field=loginAccessMode==='admin' ? $('loginUsername') : $('loginPersonnelSearch');
@@ -2462,7 +2545,9 @@ function clearAndFocusLogin(){
 }
 function doLogout() {
   ++loginSequence;
-  state.staffCode = ''; state.boot = null; state.tokens = {};state.adminCode='';document.body.classList.remove('admin-active','workspace-ready');
+  state.staffCode = ''; state.boot = null; state.tokens = {};state.adminCode='';
+  state.currentPersonId='';pendingRecoveryCode='';
+  document.body.classList.remove('admin-active','workspace-ready');
   $('appBody').classList.add('hidden');
   $('topActions').classList.add('hidden');
   $('adminOpen').textContent='⚙ ผู้ดูแลระบบ';
@@ -2473,6 +2558,7 @@ function doLogout() {
   $('loginCard').classList.remove('hidden');
   $('loginPersonnelSearch').value='';
   $('loginPersonnelId').value='';
+  $('staffCode').value='';$('adminLoginCode').value='';$('v3RecoveryCode').value='';
   $('loginUsername').value='admin';
   changeLoginAccessMode('staff');
   if(!loginRosterReady&&!loginRosterLoading)loadLoginStaffRoster();
@@ -2493,6 +2579,8 @@ function doLogout() {
   adminStaffDirectory=[];adminStaffFiltered=[];
   $('v3InvitePersonnel').textContent='';
   $('v3RecoveryShown').value='';
+  $('v3RecoveryRevealBtn').classList.add('hidden');
+  $('v3RecoveryNotice').classList.add('hidden');
   $('v3RecoveryControls').classList.add('hidden');
   v3PendingSetup=null;
 }
@@ -2631,10 +2719,10 @@ async function refreshLiveDirectory(){
 }
 setInterval(function(){if(Date.now()-rosterUpdatedAt>180000)refreshLiveDirectory();},60000);
 window.addEventListener('focus',function(){
- if(state.staffCode && Date.now()-rosterUpdatedAt>60000)refreshLiveDirectory();
+ if(state.staffCode && Date.now()-rosterUpdatedAt>300000)refreshLiveDirectory();
 });
 document.addEventListener('visibilitychange',function(){
- if(!document.hidden && state.staffCode && Date.now()-rosterUpdatedAt>60000)refreshLiveDirectory();
+ if(!document.hidden && state.staffCode && Date.now()-rosterUpdatedAt>300000)refreshLiveDirectory();
 });
 
 function setReadableFont(delta) {
