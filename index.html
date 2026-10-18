@@ -753,6 +753,24 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
  border:0;border-bottom:1px solid #e0e9e6;cursor:pointer}
 #adminStaffChoices .admin-choice:hover,#adminStaffChoices .admin-choice:focus{
  background:#d9eeea;color:#173b35;outline:2px solid #278279}
+
+/* V4.1 status-only role-guarded Admin register. Never style plaintext codes. */
+.admin-batch-panel{display:block;grid-column:1/-1;border:1px solid rgba(137,185,178,.45);
+ padding:12px;border-radius:10px;margin:6px 0;max-width:100%;min-width:0}
+.admin-batch-panel h3{margin:2px 0 5px;font-size:1rem}
+.admin-batch-actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.admin-batch-actions button{flex:1 1 160px;min-height:42px}
+.admin-register-scroll{width:100%;max-width:100%;max-height:350px;overflow:auto;
+ border:1px solid rgba(137,185,178,.42);border-radius:8px}
+.admin-register-table{width:100%;border-collapse:collapse;min-width:650px}
+.admin-register-table th,.admin-register-table td{padding:7px 9px;text-align:left;
+ border-bottom:1px solid rgba(137,185,178,.22)}
+.admin-register-table th{position:sticky;top:0;background:#22434b;color:#fff;z-index:1}
+.admin-register-table td button{min-height:36px;padding:5px 8px}
+#v41DeliveryPanel{padding:10px;margin-top:12px;border:1px solid rgba(137,185,178,.45);
+ border-radius:8px}
+.v41-delivery-entry{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid rgba(137,185,178,.20)}
 </style>
 </head>
 <body>
@@ -890,9 +908,30 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
       </div>
       <p id="adminStaffSearchStatus" class="hint" role="status" aria-live="polite">พิมพ์หรือคลิกเพื่อค้นหา</p>
       <select id="v3InvitePersonnel" class="hidden" aria-hidden="true" tabindex="-1"></select>
-      <button type="button" id="v3BulkPrepare" class="btn-primary hidden" disabled>ปิดการออก PIN รวม</button>
-      <p id="v3BulkStatus" class="hint" aria-live="polite"></p>
-      <div id="v3BulkLinks" class="hidden"></div>
+      <section id="adminBatchPanel" class="admin-batch-panel" aria-label="ทะเบียนรหัสชั่วคราวของบุคลากรทั้งหมด">
+        <h3>📒 ทะเบียนบัญชีบุคลากรทั้งหมด</h3>
+        <p class="hint">Admin เห็นสถานะบัญชีทุกคน รหัสที่เปิดใช้แล้วจะไม่ถูกรีเซตอัตโนมัติ</p>
+        <p id="v41RegistrySummary" class="hint" role="status" aria-live="polite">เปิดหน้านี้เพื่อโหลดสถานะบัญชีจาก Server</p>
+        <div class="admin-batch-actions">
+          <button type="button" id="v41Refresh" class="btn-secondary">↻ อัปเดตสถานะบัญชี</button>
+          <button type="button" id="v41IssueBatch" class="btn-primary" disabled>🔑 ออกรหัสให้บัญชีที่ยังไม่เปิดใช้งาน</button>
+          <button type="button" id="v41StatusCsv" class="btn-secondary" disabled>⬇️ ส่งออกทะเบียนสถานะ CSV (ไม่มีรหัส)</button>
+        </div>
+        <div class="admin-register-scroll">
+          <table class="admin-register-table">
+            <thead><tr><th>เลือก</th><th>ชื่อบุคลากร</th><th>สถานะ</th><th>ออก / หมดอายุ</th><th>ส่งมอบ</th></tr></thead>
+            <tbody id="v41RegistryRows"></tbody>
+          </table>
+        </div>
+        <section id="v41DeliveryPanel" class="hidden" aria-label="ส่งมอบรหัสใหม่ครั้งเดียว">
+          <h3>📋 ส่งมอบรหัสที่เพิ่งออกในรอบนี้</h3>
+          <p class="hint">แสดงรหัสเฉพาะรอบปัจจุบัน ไม่บันทึกลง Google Sheets/Drive หรือเก็บในเบราว์เซอร์ถาวร</p>
+          <p id="v41DeliverySummary" class="hint" role="status"></p>
+          <div id="v41DeliveryRows"></div>
+          <button type="button" id="v41CopyAll" class="btn-secondary">📋 คัดลอกข้อความส่งมอบทั้งหมด (ข้อมูลลับ)</button>
+          <button type="button" id="v41ClearBatch" class="btn-ghost">ล้างรหัสที่แสดงหลังส่งมอบ</button>
+        </section>
+      </section>
       <button type="button" id="v3GenerateInvite" class="btn-primary">🔑 ออก PIN ชั่วคราวเฉพาะราย (15 วัน)</button>
       <input type="text" id="v3InviteLink" readonly autocomplete="off" placeholder="PIN ชั่วคราวจะแสดงที่นี่ครั้งเดียว">
       <button type="button" id="v3CopyInvite" class="btn-secondary">📋 คัดลอกข้อความส่งมอบพร้อมชื่อ</button>
@@ -1126,6 +1165,7 @@ const GAS_RPC_ENDPOINT = 'https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSk
 const CLIENT_RPC_ALLOWLIST = Object.freeze({
   fastAuth:true,listLoginRoster:true,pinSignIn:true,pinCompleteFirstChange:true,v3AdminPrepareMissingInvites:true,
   pinChangeOwn:true,pinSelfReset:true,pinAdminReset:true,v3AdminIssueInvitation:true,
+  v3AdminTemporaryRegister:true,v3AdminIssuePendingBatch:true,v3AdminMarkTempDelivered:true,
   getBootstrap:true,listMemoRequests:true,requestMemoNumber:true,
   cancelMemoRequest:true,adminAuthenticate:true,adminUpdateIssued:true,
   adminVoidIssued:true
@@ -2061,38 +2101,179 @@ $('v3ResetPin').addEventListener('click',async function(){
   await t3Alert('ออก PIN ชั่วคราวใหม่แล้ว (ใช้ได้ 15 วัน): '+String(r.data.temporaryPin||'')+' กรุณาเก็บไว้เป็นความลับและใช้เข้าสู่ระบบเพื่อตั้ง PIN ใหม่');
   $('staffCode').focus();
 });
-/* Admin-only, one click. One-use private links must be sent individually. */
-$('v3BulkPrepare').addEventListener('click',async function(){
-  if(!state.adminCode)return;
-  if(!await t3Confirm('ระบบปิดการออก PIN รวม กรุณาออก PIN เฉพาะรายผ่าน Admin'))return;
-  var button=this;
-  button.disabled=true;
-  $('v3BulkStatus').textContent='กำลังเตรียมลิงก์สำหรับบัญชีที่ยังไม่มี PIN…';
+/* V4.1 Admin-only onboarding register; no plaintext code storage on Server or in persistent browser. */
+var adminRegistryRecords=[],adminRegisterBusy=false,adminRegisterLoaded=false,adminBatchSecrets=[];
+function v41ThaiDate(value){
+  if(!value)return '—';
+  var n=new Date(Number(value));return Number.isFinite(n.valueOf())
+    ?n.toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}):'—';
+}
+function v41BatchEligible(){
+  return adminRegistryRecords.filter(function(p){return p.canBatchIssue===true;});
+}
+function v41RenderRegistry(){
+  var tbody=$('v41RegistryRows'),frag=document.createDocumentFragment();
+  var statusNames={ACTIVE:'เปิดใช้งานแล้ว',PENDING:'รอตั้งรหัสส่วนตัว',
+    NOT_ISSUED:'ยังไม่ออกรหัส',EXPIRED:'หมดอายุ',BLOCKED:'ถูกระงับ',
+    RESET_PENDING:'รอตั้งรหัสใหม่ (เดิมใช้งานแล้ว)',REVOKED:'ยกเลิกรหัส'};
+  adminRegistryRecords.forEach(function(p){
+    var tr=document.createElement('tr');
+    var a=document.createElement('td'),check=document.createElement('input');
+    check.type='checkbox';check.className='v41-eligible-checkbox';
+    check.dataset.id=p.id;check.checked=!!p.canBatchIssue;check.disabled=!p.canBatchIssue;
+    check.setAttribute('aria-label','เลือก '+p.name);
+    a.appendChild(check);
+    var name=document.createElement('td');name.textContent=p.name;
+    var state=document.createElement('td');state.textContent=statusNames[p.status]||p.status||'—';
+    var times=document.createElement('td');times.textContent=v41ThaiDate(p.issuedAt)+' / '+v41ThaiDate(p.expiresAt);
+    var delivered=document.createElement('td');
+    if(p.deliveryStatus==='DELIVERED'){
+      delivered.textContent='ส่งมอบแล้ว '+v41ThaiDate(p.deliveredAt);
+    }else if(p.status==='PENDING'){
+      var button=document.createElement('button');button.type='button';
+      button.className='btn-secondary';button.textContent='บันทึกว่าส่งมอบแล้ว';
+      button.addEventListener('click',function(){v41MarkDelivered(p.id);});
+      delivered.appendChild(button);
+    }else delivered.textContent='—';
+    tr.append(a,name,state,times,delivered);frag.appendChild(tr);
+  });
+  tbody.replaceChildren(frag);
+  var eligible=v41BatchEligible().length,active=adminRegistryRecords.filter(function(p){return p.status==='ACTIVE';}).length;
+  $('v41RegistrySummary').textContent='บุคลากร '+adminRegistryRecords.length+
+    ' คน · เปิดบัญชีแล้ว '+active+' คน · ยังเข้าเกณฑ์ออกรหัส '+eligible+' คน';
+  $('v41IssueBatch').disabled=adminRegisterBusy||!eligible;
+  $('v41StatusCsv').disabled=adminRegisterBusy||!adminRegistryRecords.length;
+}
+async function v41LoadRegistry(){
+  if(!state.adminCode||adminRegisterBusy)return;
+  adminRegisterBusy=true;$('v41IssueBatch').disabled=true;$('v41Refresh').disabled=true;
+  $('v41RegistrySummary').textContent='กำลังอ่านทะเบียนสถานะจาก Server…';
   try{
-    var result=await call('v3AdminPrepareMissingInvites',[state.adminCode]);
-    if(!result||!result.ok)throw Error(result?.error?.message||'ไม่สามารถเตรียมบัญชีได้');
-    var data=result.data||{},rows=data.people||[];
-    $('v3BulkStatus').textContent='เตรียมลิงก์ใหม่ '+rows.length+' รายการ จากผู้มีสิทธิ์ '+
-       data.eligible+' คน (บัญชีเดิม '+data.alreadyKnown+' คน — หากยังตั้ง PIN ไม่ได้ ให้เลือกชื่อและกด 🔗 สร้างลิงก์เฉพาะราย)';
-    var holder=$('v3BulkLinks');holder.textContent='';
-    rows.forEach(function(person){
-      var line=document.createElement('div');line.className='row';
-      var label=document.createElement('span');label.textContent=person.name;
-      var copy=document.createElement('button');copy.type='button';
-      copy.className='btn-secondary';copy.textContent='คัดลอกลิงก์';
-      copy.addEventListener('click',async function(){
-        try{
-          await navigator.clipboard.writeText(person.url);
-          $('v3BulkStatus').textContent='คัดลอกแล้ว';
-        }catch(err){$('v3BulkStatus').textContent='คัดลอกไม่สำเร็จ กรุณาลองอีกครั้ง';}
-      });
-      line.appendChild(label);line.appendChild(copy);holder.appendChild(line);
-    });
-    holder.classList.toggle('hidden',!rows.length);
-  }catch(err){$('v3BulkStatus').textContent=err.message||'เกิดข้อผิดพลาด';}
-  finally{button.disabled=false;}
+    var session=state.adminCode;
+    var r=await call('v3AdminTemporaryRegister',[session]);
+    if(!state.adminCode||session!==state.adminCode)return;
+    if(!r||!r.ok)throw Error(r?.error?.message||'อ่านทะเบียนไม่สำเร็จ');
+    adminRegistryRecords=Array.isArray(r.data?.people)?r.data.people:[];
+    adminRegisterLoaded=true;
+    v41RenderRegistry();
+  }catch(err){
+    $('v41RegistrySummary').textContent='โหลดสถานะไม่สำเร็จ: '+(err.message||'ลองใหม่');
+  }finally{
+    adminRegisterBusy=false;$('v41Refresh').disabled=false;
+    $('v41IssueBatch').disabled=!v41BatchEligible().length;
+    $('v41StatusCsv').disabled=!adminRegistryRecords.length;
+  }
+}
+function v41NewBatchId(){
+  if(!window.crypto||!crypto.getRandomValues)throw Error('BROWSER_ENTROPY_UNAVAILABLE');
+  var data=new Uint8Array(18);crypto.getRandomValues(data);
+  return 'T3B_'+Array.from(data,function(x){return x.toString(16).padStart(2,'0');}).join('');
+}
+function v41RenderBatchSecrets(){
+  var panel=$('v41DeliveryPanel'),target=$('v41DeliveryRows');target.textContent='';
+  if(!adminBatchSecrets.length){panel.classList.add('hidden');return;}
+  panel.classList.remove('hidden');
+  $('v41DeliverySummary').textContent='สร้างใหม่ '+adminBatchSecrets.length+' คน · แสดงครั้งเดียวเฉพาะ Admin';
+  adminBatchSecrets.forEach(function(p){
+    var line=document.createElement('div');line.className='v41-delivery-entry';
+    var n=document.createElement('strong');n.textContent=p.name;
+    var action=document.createElement('button');action.type='button';action.className='btn-secondary';
+    action.textContent='คัดลอกข้อความส่งมอบ';
+    action.addEventListener('click',function(){v41CopyMessage(p);});
+    line.append(n,action);target.appendChild(line);
+  });
+}
+function v41Message(p){
+  return 'เรียน '+p.name+'\nรหัสชั่วคราวทะเบียนเลขบันทึกข้อความ: '+p.code+
+    '\nรหัสมีอายุ 15 วัน กรุณาตั้งรหัสส่วนตัวหลังเข้าใช้ครั้งแรก และห้ามส่งต่อผู้อื่น';
+}
+async function v41CopyMessage(p){
+  if(!state.adminCode)return;
+  try{await navigator.clipboard.writeText(v41Message(p));await t3Alert('คัดลอกข้อความสำหรับ '+p.name+' แล้ว ส่งเฉพาะเจ้าของบัญชีที่ยืนยันตัวบุคคล');}
+  catch(err){await t3Alert('คัดลอกไม่ได้ กรุณาตรวจสิทธิ์ Clipboard ของเบราว์เซอร์');}
+}
+$('v41CopyAll').addEventListener('click',async function(){
+  if(!state.adminCode||!adminBatchSecrets.length)return;
+  if(!await t3Confirm('การคัดลอกหลายรหัสพร้อมกันเป็นข้อมูลลับ ต้องส่งให้เจ้าของบัญชีแต่ละคนโดยตรง และลบข้อมูลจาก Clipboard หลังใช้งาน ยืนยัน?'))return;
+  await navigator.clipboard.writeText(adminBatchSecrets.map(v41Message).join('\n\n---\n\n'));
+  await t3Alert('คัดลอกแล้ว ต้องส่งมอบเป็นการส่วนตัวเท่านั้น ห้ามส่งรวมในห้อง LINE หรือ Sheet สาธารณะ');
 });
-
+window.addEventListener('pagehide',function(){v41ClearSecrets();});
+function v41ClearSecrets(){
+  adminBatchSecrets.forEach(function(p){p.code='';});
+  adminBatchSecrets=[];v41RenderBatchSecrets();
+}
+$('v41ClearBatch').addEventListener('click',async function(){
+  if(!await t3Confirm('ล้างรหัสจากหน้าจอ? เมื่อปิดแล้วจะอ่านย้อนจาก Server ไม่ได้'))return;
+  v41ClearSecrets();
+});
+$('v41Refresh').addEventListener('click',v41LoadRegistry);
+$('v41IssueBatch').addEventListener('click',async function(){
+  if(!state.adminCode||adminRegisterBusy||!adminRegisterLoaded)return;
+  var choices=Array.from(document.querySelectorAll('.v41-eligible-checkbox:checked')).map(function(c){return c.dataset.id;});
+  choices=choices.filter(function(id){return v41BatchEligible().some(function(p){return p.id===id;});});
+  if(!choices.length)return;
+  if(!await t3Confirm('ยืนยันการออกรหัสชั่วคราว 15 วันให้ '+choices.length+
+       ' บัญชีที่ยังไม่เปิดใช้งาน โดยไม่รีเซตบัญชี ACTIVE และไม่ทับรหัสที่ยังไม่หมดอายุ?'))return;
+  adminRegisterBusy=true;$('v41IssueBatch').disabled=true;
+  var requestSession=state.adminCode;
+  var allOutcomes=[];
+  try{
+    for(var index=0;index<choices.length;index+=8){
+      if(!state.adminCode||state.adminCode!==requestSession)break;
+      var part=choices.slice(index,index+8),reference=v41NewBatchId();
+      $('v41RegistrySummary').textContent='กำลังออกชุด '+(Math.floor(index/8)+1)+
+        ' จาก '+Math.ceil(choices.length/8)+' ชุด…';
+      var result=await call('v3AdminIssuePendingBatch',[requestSession,part,reference]);
+      if(!state.adminCode||state.adminCode!==requestSession)break;
+      if(!result||!result.ok)throw Error(result?.error?.message||'ออกชุดไม่สำเร็จ');
+      (result.data.results||[]).forEach(function(p){
+        allOutcomes.push(p);
+        if(p.status==='ISSUED'&&p.temporaryPin){
+          adminBatchSecrets.push({id:p.id,name:p.name,code:String(p.temporaryPin)});
+        }
+      });
+      v41RenderBatchSecrets();
+    }
+    if(state.adminCode===requestSession){
+      var total=allOutcomes.filter(function(x){return x.status==='ISSUED'}).length;
+      var missingCode=allOutcomes.filter(function(x){return x.recoverable;}).length;
+      await t3Alert('ออกใหม่ '+total+' คน · ข้ามบัญชีที่ใช้งานแล้วหรือมีรหัสค้างที่ยังใช้ได้ '+
+        (allOutcomes.length-total)+' คน'+
+        (missingCode?' · '+missingCode+' บัญชีมีรหัสค้างแต่ไม่สามารถอ่านกลับ ต้องออกใหม่เฉพาะราย':'')+
+        ' โปรดส่งมอบรหัสให้เจ้าของบัญชีเท่านั้น');
+    }
+  }catch(err){
+    if(state.adminCode===requestSession)await t3Alert('ชุดออกบัญชีบางส่วนไม่สมบูรณ์: '+
+       (err.message||'การเชื่อมต่อขัดข้อง')+
+       ' ตรวจทะเบียนก่อนดำเนินการซ้ำ รหัสชุดที่ตอบกลับมาแล้วยังอยู่ในหน้าจอ');
+  }finally{
+    adminRegisterBusy=false;
+    if(state.adminCode===requestSession)await v41LoadRegistry();
+  }
+});
+async function v41MarkDelivered(id){
+  if(!state.adminCode||!id)return;
+  if(!await t3Confirm('Admin ยืนยันว่าได้ส่งรหัสชั่วคราวให้เจ้าของบัญชีที่ตรวจตัวบุคคลแล้วใช่หรือไม่?'))return;
+  var result=await call('v3AdminMarkTempDelivered',[state.adminCode,id]);
+  if(!result||!result.ok){await t3Alert(result?.error?.message||'บันทึกการส่งมอบไม่สำเร็จ');return;}
+  await v41LoadRegistry();
+}
+$('v41StatusCsv').addEventListener('click',function(){
+  if(!state.adminCode||!adminRegistryRecords.length)return;
+  var rows=[['รหัสบุคลากร','ชื่อบุคลากร','สถานะบัญชี','วันออกรหัส','วันหมดอายุ','สถานะส่งมอบ','ส่งมอบเมื่อ']];
+  adminRegistryRecords.forEach(function(p){
+    rows.push([p.id,p.name,p.status,v41ThaiDate(p.issuedAt),v41ThaiDate(p.expiresAt),p.deliveryStatus,v41ThaiDate(p.deliveredAt)]);
+  });
+  function safe(v){
+    var x=String(v??'');if(/^[=+\-@\t\r\n]/.test(x))x="'"+x;
+    return '"'+x.replace(/"/g,'""')+'"';
+  }
+  var body='\ufeff'+rows.map(function(row){return row.map(safe).join(',');}).join('\r\n');
+  var u=URL.createObjectURL(new Blob([body],{type:'text/csv;charset=utf-8'}));
+  var a=document.createElement('a');a.href=u;a.download='T3_ACCOUNT_STATUS_PRIVATE_'+todayISO()+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);
+});
 // Admin instant local search: normalized directory is indexed ONCE per snapshot,
  // then filtered synchronously on every keystroke. No RPC on each input event.
 var adminStaffDirectory=[],adminStaffFiltered=[],adminDirectoryReady=false;
@@ -2326,6 +2507,8 @@ function setWorkspaceView(next){
   var allowed={register:true,issue:true,accounts:!!state.adminCode,dashboard:true};
   if(!allowed[next])next='register';
   app.dataset.workspaceView=next;
+  if(next==='accounts'&&state.adminCode&&!adminRegisterLoaded&&!adminRegisterBusy)
+    v41LoadRegistry();
   document.body.classList.toggle('workspace-dashboard',next==='dashboard');
   [['wViewRegister','register'],['wViewIssue','issue'],['wViewAccounts','accounts']].forEach(function(entry){
     $(entry[0]).setAttribute('aria-pressed',String(entry[1]===next || (next==='dashboard'&&entry[1]==='issue')));
@@ -2712,6 +2895,9 @@ function doLogout() {
   $('adminStaffSearchStatus').textContent='';
   adminStaffDirectory=[];adminStaffFiltered=[];adminDirectoryReady=false;adminChosenPersonId='';
   closeAdminStaffChoices();$('v3InvitePersonnel').textContent='';
+  adminRegistryRecords=[];adminRegisterLoaded=false;adminRegisterBusy=false;
+  v41ClearSecrets();$('v41RegistryRows').textContent='';
+  $('v41RegistrySummary').textContent='';
   $('v3RecoveryShown').value='';
   $('v3RecoveryRevealBtn').classList.add('hidden');
   $('v3RecoveryNotice').classList.add('hidden');
