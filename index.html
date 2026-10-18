@@ -728,6 +728,18 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
  body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main{display:block!important}
  body.workspace-ready #appBody[data-workspace-view="dashboard"]>.register-panel{display:flex!important}
 }
+
+/* V3.12 required-subject validation, visible beside the affected field. */
+#subject[aria-invalid="true"]{
+  border:2px solid #c62828!important;background:#fff2f2!important;
+  outline:2px solid rgba(198,40,40,.20)!important;outline-offset:1px;
+}
+#subjectError.subject-validation:not(.hidden){
+  display:block!important;background:#ffe1e1;color:#9e1717;
+  border-left:4px solid #c62828;border-radius:6px;
+  padding:7px 10px;margin:5px 0 8px!important;
+  font-weight:700;font-size:.88rem;line-height:1.4;
+}
 </style>
 </head>
 <body>
@@ -901,7 +913,9 @@ body.workspace-ready #appBody[data-workspace-view="dashboard"]>.card-main .optio
       <button id="reloadRosterBtn" type="button" class="btn-ghost hidden" style="margin-top:8px;min-height:44px">↻ อัปเดตรายชื่อ</button>
 
       <label for="subject">หัวข้อ / เรื่อง</label>
-      <textarea id="subject" maxlength="180" placeholder="ระบุรายละเอียดหนังสือที่ต้องการ"></textarea>
+      <textarea id="subject" maxlength="180" placeholder="ระบุรายละเอียดหนังสือที่ต้องการ"
+        aria-describedby="subjectError" aria-invalid="false" required></textarea>
+      <p id="subjectError" class="subject-validation hidden" role="alert" aria-live="assertive">กรุณาระบุหัวข้อ/เรื่อง</p>
 
       <div class="issue-fields">
         <div class="field">
@@ -2408,9 +2422,34 @@ function nextRequestId() {
   return pendingNonce;
 }
 
+function clearSubjectValidation(){
+  $('subject').setAttribute('aria-invalid','false');
+  $('subject').style.removeProperty('border-color');
+  $('subject').style.removeProperty('background-color');
+  $('subject').style.removeProperty('transition');
+  $('subjectError').classList.add('hidden');
+}
+function requireSubjectFocus(){
+  $('subject').setAttribute('aria-invalid','true');
+  $('subject').style.setProperty('border-color','#c62828','important');
+  $('subject').style.setProperty('background-color','#fff2f2','important');
+  $('subject').style.setProperty('transition','none','important');
+  $('subjectError').classList.remove('hidden');
+  showMsg($('submitMsg'),'กรุณาระบุหัวข้อ/เรื่อง','err');
+  var field=$('subject');
+  field.focus({preventScroll:false});
+  field.scrollIntoView({block:'center',behavior:'smooth'});
+}
+$('subject').addEventListener('input',function(){
+  if(this.value.trim()){
+    clearSubjectValidation();
+    if($('submitMsg').textContent.includes('กรุณาระบุหัวข้อ/เรื่อง'))hideMsg($('submitMsg'));
+  }
+});
 async function submitRequest() {
   var subject = $('subject').value.trim();
-  if (!subject) { showMsg($('submitMsg'), 'กรุณากรอกหัวข้อ/เรื่อง', 'err'); return; }
+  if(!subject){requireSubjectFocus();return;}
+  clearSubjectValidation();
 
   applySelectedPersonnelText();
   var personnelId=$('personnel').value||'';
@@ -2532,16 +2571,21 @@ async function refreshBootstrap() {
 }
 
 function clearAndFocusLogin(){
+  if(state.staffCode||$('loginCard').classList.contains('hidden'))return;
   $('staffCode').value='';$('adminLoginCode').value='';
   $('loginPersonnelSearch').value='';$('loginPersonnelId').value='';
   $('v3RecoveryCode').value='';
+  // Always return to the teacher/administrator name chooser, including BFCache restores.
+  changeLoginAccessMode('staff');
   closeLoginSuggestions();
-  requestAnimationFrame(function(){
-    if(!$('loginCard').classList.contains('hidden')){
-      var field=loginAccessMode==='admin' ? $('loginUsername') : $('loginPersonnelSearch');
-      field.focus({preventScroll:true});
+  function focusName(){
+    if(!state.staffCode && !$('loginCard').classList.contains('hidden') &&
+       loginAccessMode==='staff' && document.visibilityState!=='hidden'){
+      $('loginPersonnelSearch').focus({preventScroll:true});
     }
-  });
+  }
+  requestAnimationFrame(focusName);
+  setTimeout(focusName,90);
 }
 function doLogout() {
   ++loginSequence;
@@ -2569,6 +2613,9 @@ function doLogout() {
   hideMsg($('loginMsg'));
   clearAndFocusLogin();
   $('personnelSearch').value='';
+  $('subject').value='';$('notes').value='';
+  clearSubjectValidation();hideMsg($('submitMsg'));
+  pendingNonce=null;
   $('v3AdminInviteBox').classList.add('hidden');
   $('v3RecoveryNotice').classList.add('hidden');
   $('v3FirstChangeControls').classList.add('hidden');
