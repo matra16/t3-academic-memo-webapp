@@ -1812,7 +1812,8 @@ async function doLogin() {
     $('loginPersonnelSearch').focus();return;
   }
   if(!isAdmin&&!/^[0-9]{6}$/.test(code)){
-    showMsg($('loginMsg'),'กรุณากรอก รหัส 6 หลัก','err');return;
+    showMsg($('loginMsg'),'กรุณากรอก รหัส 6 หลัก','err');
+    $('staffCode').value='';$('staffCode').focus({preventScroll:true});return;
   }
   if(!code){showMsg($('loginMsg'),'กรุณากรอกรหัสเข้าใช้งาน','err');return;}
   loginInFlight=true;
@@ -1832,6 +1833,10 @@ async function doLogin() {
       message='บัญชีนี้ยังไม่มี รหัส ชั่วคราวที่ออกโดยผู้ดูแล กรุณาติดต่อผู้ดูแลระบบ';
     }
     showMsg($('loginMsg'),message,'err');
+    // Keep the chosen user, but clear stale credentials and place focus immediately.
+    var retryInput=isAdmin?$('adminLoginCode'):$('staffCode');
+    retryInput.value='';
+    retryInput.focus({preventScroll:true});
     return;
   }
   if(!isAdmin&&r.data&&r.data.firstChangeRequired){
