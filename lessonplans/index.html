@@ -172,8 +172,25 @@
     var SESSION_TOKEN = '';
 
     function $(i){return document.getElementById(i);}
+    // The public Memo V27 backend must NOT be mistaken for a deployed
+    // LessonPlan backend. A benign invalid-token probe distinguishes a live
+    // LP RPC from an unknown command without submitting a PIN or writing data.
+    var LP_BACKEND_READY=false;
+    async function probeLessonPlanBackend(){
+      try{
+        var r=await rpc('lp_dashboard',['LP_BACKEND_PROBE_INVALID_TOKEN']);
+        LP_BACKEND_READY=!!(r && r.ok===false && r.error==='NOT_AUTHENTICATED');
+      }catch(_e){LP_BACKEND_READY=false;}
+      if(!LP_BACKEND_READY)showWarn('ระบบส่ง–ตรวจแผนยังไม่เปิดใช้งาน กรุณารอการเปิดระบบอย่างเป็นทางการ');
+      return LP_BACKEND_READY;
+    }
     $('loginForm').addEventListener('submit',async function(ev){
       ev.preventDefault();
+      if(!await probeLessonPlanBackend()){
+        $('loginPin').value='';
+        showErr('Backend สำหรับส่ง–ตรวจแผนยังไม่พร้อม จึงยังไม่รับ PIN');
+        return;
+      }
       var pid=$('personnelId').value.trim(), pin=$('loginPin').value;
       try {
         // Calls existing V4.1 server PIN broker IN SAME Apps Script, no shadow PIN database.
@@ -462,7 +479,7 @@
     window.addEventListener('error',function(ev){showErr('Runtime error: '+ev.message);});
     window.addEventListener('unhandledrejection',function(ev){showErr('Async error: '+(ev.reason&&ev.reason.message||ev.reason));});
 
-    loadDash();
+    probeLessonPlanBackend();
   </script>
 </body>
 </html>
