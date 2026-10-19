@@ -1,0 +1,485 @@
+// FILE: LessonPlanIndex.html
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แผนการสอน - T3 Academic Admin</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;margin:0;background:#f4f6f9;color:#1a1a1a}
+    header{background:linear-gradient(135deg,#1a4d8f,#2d6cb0);color:#fff;padding:14px 20px;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+    header h1{margin:0;font-size:1.35rem}
+    header .meta{font-size:.85rem;opacity:.9;margin-top:4px}
+    main{max-width:1200px;margin:18px auto;padding:0 14px}
+    .card{background:#fff;border-radius:8px;padding:18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .card h2{margin-top:0;font-size:1.1rem;border-bottom:2px solid #2d6cb0;padding-bottom:6px}
+    .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;background:#e3f2fd;color:#1565c0}
+    .badge.reviewer{background:#fff3c4;color:#856404}
+    .badge.approver{background:#c8e6c9;color:#2e7d32}
+    label{display:block;margin-top:10px;font-weight:600;font-size:.88rem}
+    input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:.95rem;font-family:inherit}
+    button{background:#2d6cb0;color:#fff;border:none;padding:9px 18px;border-radius:4px;cursor:pointer;font-size:.95rem;margin-top:10px}
+    button:hover{background:#1a4d8f}
+    button:disabled{background:#aaa;cursor:not-allowed}
+    table{width:100%;border-collapse:collapse;font-size:.88rem}
+    th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #eee}
+    th{background:#f0f4f8}
+    .state{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.74rem}
+    .state.DRAFT{background:#e0e0e0;color:#555}
+    .state.SUBMITTED,.state.IN_REVIEW{background:#bbdefb;color:#0d47a1}
+    .state.REVIEWED,.state.APPROVED{background:#c8e6c9;color:#1b5e20}
+    .state.REVISION_REQUESTED,.state.REJECTED{background:#ffcdd2;color:#b71c1c}
+    .err{background:#ffebee;color:#c62828;padding:9px;border-radius:4px;margin:8px 0;display:none}
+    .ok{background:#e8f5e9;color:#2e7d32;padding:9px;border-radius:4px;margin:8px 0;display:none}
+    .warn{background:#fff3e0;color:#e65100;padding:9px;border-radius:4px;margin:8px 0;display:none}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .busy{opacity:.75;cursor:progress}
+    .muted{color:#596a7e;font-size:.82rem}
+    .table-scroll{width:100%;overflow-x:auto}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+      outline:3px solid #e59a12;outline-offset:2px
+    }
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+    .col{flex:1;min-width:240px}
+    @media(max-width:600px){header h1{font-size:1.05rem}.card{padding:12px}button{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📚 ระบบแผนการสอนออนไลน์ (T3 Academic Admin)</h1>
+    <div class="meta" id="actorMeta">กำลังโหลด...</div>
+  </header>
+  <main>
+    <div id="errBox" class="err" role="alert"></div>
+    <div id="okBox" class="ok" role="status"></div>
+    <div id="warnBox" class="warn" role="status"></div>
+    <div class="card" id="authCard">
+      <h2>เข้าสู่ระบบด้วยบัญชีเดิม (ระบบออกเลขบันทึกภายใน)</h2>
+      <form id="loginForm" autocomplete="off">
+        <label for="personnelId">รหัสบุคลากร (บัญชีเดิม)</label>
+        <input id="personnelId" required autocomplete="username" aria-required="true">
+        <label for="loginPin">PIN เดิม 6 หลัก</label>
+        <input id="loginPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="current-password" aria-required="true">
+        <button type="submit">เข้าสู่ระบบ</button>
+      </form>
+      <p>ใช้ PIN จากระบบออกเลขบันทึกภายในโดยตรง ไม่สร้างรหัสผ่านใหม่และไม่บันทึก PIN ในเว็บนี้</p>
+    </div>
+
+
+    <div id="workArea" style="display:none">
+    <div class="card">
+      <h2>แดชบอร์ด <span id="roleBadge" class="badge">-</span></h2>
+      <button id="logoutBtn" type="button">ออกจากหน้านี้</button>
+      <div class="row">
+        <div class="col">
+          <h3>แผนของฉัน (<span id="myCount">0</span>)</h3>
+          <table id="myTbl" aria-label="แผนของฉัน">
+            <thead><tr><th>รหัส</th><th>ชื่อ</th><th>สถานะ</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="col" id="revCol" style="display:none">
+          <h3>คิวตรวจ (<span id="revCount">0</span>)</h3>
+          <table id="revTbl" aria-label="คิวตรวจ">
+            <thead><tr><th>รหัส</th><th>ชื่อ</th><th>สถานะ</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>สร้างแผนฉบับร่าง (DRAFT)</h2>
+      <form id="createForm" aria-label="ฟอร์มสร้างแผน">
+        <label for="title">ชื่อแผนการสอน *</label>
+        <input id="title" type="text" required aria-required="true" maxlength="200">
+        <div class="row">
+          <div class="col">
+            <label for="ay">ปีการศึกษา</label>
+            <input id="ay" type="text" placeholder="เช่น 2567" maxlength="10">
+          </div>
+          <div class="col">
+            <label for="term">ภาคเรียน</label>
+            <select id="term">
+              <option value="1">ภาคเรียนที่ 1</option>
+              <option value="2">ภาคเรียนที่ 2</option>
+              <option value="S">ภาคฤดูร้อน</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="subj">รหัสวิชา</label>
+            <input id="subj" type="text" maxlength="50">
+          </div>
+          <div class="col">
+            <label for="cls">รหัสห้องเรียน</label>
+            <input id="cls" type="text" maxlength="50">
+          </div>
+        </div>
+        <button type="submit">สร้างแผน</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>ส่งไฟล์ PDF (Submit Revision)</h2>
+      <form id="submitForm" aria-label="ฟอร์มส่งไฟล์ PDF">
+        <label for="planSel">เลือกแผน *</label>
+        <select id="planSel" required></select>
+        <label for="pdfFile">ไฟล์ PDF (≤ 10MB) *</label>
+        <input id="pdfFile" type="file" accept="application/pdf" required aria-required="true">
+        <button type="submit">ส่งไฟล์</button>
+      </form>
+    </div>
+
+    <div class="card" id="reviewerCard" style="display:none">
+      <h2>ดำเนินการตรวจ</h2>
+      <form id="reviewForm" aria-label="ฟอร์มดำเนินการตรวจ">
+        <label for="revPlan">รหัสแผน *</label>
+        <select id="revPlan" required><option value="">-- เลือกแผนจากคิวตรวจ --</option></select>
+        <label for="revAct">การดำเนินการ *</label>
+        <select id="revAct">
+          <option value="IN_REVIEW">เริ่มตรวจ (SUBMITTED → IN_REVIEW)</option>
+          <option value="REVISION_REQUESTED">ขอแก้ไข (IN_REVIEW → REVISION_REQUESTED)</option>
+          <option value="REVIEWED">ตรวจเสร็จ (IN_REVIEW → REVIEWED)</option>
+          <option value="APPROVED">อนุมัติ (REVIEWED → APPROVED)</option>
+        </select>
+        <label for="revNotes">หมายเหตุ</label>
+        <textarea id="revNotes" rows="3" maxlength="1000"></textarea>
+        <button type="submit">บันทึกผล</button>
+      </form>
+    </div>
+    <div class="card" id="adminCard" style="display:none">
+      <h2>มอบหมายผู้ตรวจแผน <span class="badge">Academic Admin</span></h2>
+      <p class="muted">ต้องเป็นบุคลากรที่มีสิทธิ์ REVIEWER หรือ APPROVER ที่ตรวจสอบจากทะเบียนอำนาจแล้วเท่านั้น</p>
+      <form id="assignForm">
+        <label for="assignPlan">แผนที่รอมอบหมาย</label>
+        <select id="assignPlan" required></select>
+        <label for="assignReviewer">รหัสบุคลากรของผู้ตรวจ/ผู้อนุมัติ</label>
+        <input id="assignReviewer" required minlength="3" maxlength="36" pattern="[A-Za-z0-9_-]+">
+        <label for="assignDue">กำหนดส่งผลตรวจ</label>
+        <input id="assignDue" type="date" required>
+        <button type="submit">มอบหมายผู้ตรวจ</button>
+      </form>
+    </div>
+    </div><!-- workArea -->
+  </main>
+
+  <script>
+    // Same existing PIN broker; session stays in page memory only.
+    var SESSION_TOKEN = '';
+
+    function $(i){return document.getElementById(i);}
+    // The public Memo V27 backend must NOT be mistaken for a deployed
+    // LessonPlan backend. A benign invalid-token probe distinguishes a live
+    // LP RPC from an unknown command without submitting a PIN or writing data.
+    var LP_BACKEND_READY=false;
+    async function probeLessonPlanBackend(){
+      try{
+        var r=await rpc('lp_dashboard',['LP_BACKEND_PROBE_INVALID_TOKEN']);
+        LP_BACKEND_READY=!!(r && r.ok===false && r.error==='NOT_AUTHENTICATED');
+      }catch(_e){LP_BACKEND_READY=false;}
+      if(!LP_BACKEND_READY)showWarn('ระบบส่ง–ตรวจแผนยังไม่เปิดใช้งาน กรุณารอการเปิดระบบอย่างเป็นทางการ');
+      return LP_BACKEND_READY;
+    }
+    $('loginForm').addEventListener('submit',async function(ev){
+      ev.preventDefault();
+      if(!await probeLessonPlanBackend()){
+        $('loginPin').value='';
+        showErr('Backend สำหรับส่ง–ตรวจแผนยังไม่พร้อม จึงยังไม่รับ PIN');
+        return;
+      }
+      var pid=$('personnelId').value.trim(), pin=$('loginPin').value;
+      try {
+        // Calls existing V4.1 server PIN broker IN SAME Apps Script, no shadow PIN database.
+        var r=await rpc('pinSignIn',[pid,pin]);
+        $('loginPin').value='';
+        if (!r || !r.ok){showErr('เข้าสู่ระบบไม่สำเร็จ: '+(r&&r.error||'ตรวจข้อมูลบัญชี'));return;}
+        if (r.data && r.data.firstChangeRequired){showWarn('โปรดเปลี่ยน PIN ชั่วคราวในระบบบันทึกภายในก่อน');return;}
+        SESSION_TOKEN=(r.data&&r.data.sessionToken) || r.sessionToken || '';
+        if(!SESSION_TOKEN){showErr('ยังไม่มี Session ที่ตรวจสอบได้ โปรดเข้าระบบบันทึกภายในเพื่อตรวจบัญชี');return;}
+        $('authCard').style.display='none';
+        $('workArea').style.display='block';
+        await loadDash();
+      }catch(e){$('loginPin').value='';showErr('เข้าสู่ระบบไม่สำเร็จ');}
+    });
+
+    function safeState(s){var v=String(s||'');return /^(DRAFT|SUBMITTED|IN_REVIEW|REVISION_REQUESTED|REVIEWED|APPROVED|REJECTED)$/.test(v)?v:'UNKNOWN';}
+    function esc(s){return String(s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function showErr(m){var b=$('errBox');b.textContent='⚠ '+m;b.style.display='block';
+      setTimeout(function(){b.style.display='none';},8000);}
+    function showOk(m){var b=$('okBox');b.textContent='✓ '+m;b.style.display='block';
+      setTimeout(function(){b.style.display='none';},5000);}
+    function showWarn(m){var b=$('warnBox');b.textContent='ⓘ '+m;b.style.display='block';
+      setTimeout(function(){b.style.display='none';},7000);}
+    function genReq(p){return p+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);}
+    // Exact same GitHub Pages -> Apps Script JSON RPC transport as the
+    // existing Internal Memo V4.1, with a separate allowlist for lesson plans.
+    // No password, session token, or private school record is committed to GitHub.
+    const GAS_RPC_ENDPOINT='https://script.google.com/a/*/macros/s/AKfycbx0KOKIxSkbhCFZ_uJs4dil1jvANgb4bGoeYYpToRUcQ8UBj96HE_UuraVbC9tJLSte/exec';
+    const LP_RPC_ALLOWLIST=Object.freeze({
+      pinSignIn:true,lp_dashboard:true,lp_createDraft:true,lp_submitRevision:true,
+      lp_listMyPlans:true,lp_transitionReview:true,lp_assignReviewer:true,lp_downloadPdf:true
+    });
+    async function rpc(name,args){
+      if(!LP_RPC_ALLOWLIST[name])return {ok:false,error:'RPC_NOT_ALLOWED'};
+      var controller=new AbortController();
+      var timer=setTimeout(function(){controller.abort();},name==='lp_submitRevision'?110000:30000);
+      try{
+        var response=await fetch(GAS_RPC_ENDPOINT,{
+          method:'POST',mode:'cors',redirect:'follow',
+          headers:{'Content-Type':'text/plain;charset=UTF-8'},
+          cache:'no-store',credentials:'omit',
+          body:JSON.stringify({fn:name,args:args||[]}),signal:controller.signal
+        });
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        var result=await response.json();
+        if(!result||typeof result.ok!=='boolean')throw new Error('INVALID_RPC_RESPONSE');
+        return result;
+      }catch(e){
+        // A lost POST response might mean a server write completed. Retain
+        // the same idempotency requestId when retrying the same operation.
+        return {ok:false,error:e.name==='AbortError'?'REQUEST_TIMEOUT':'CONNECT_ERROR'};
+      }finally{clearTimeout(timer);}
+    }
+    var ROLE={role:'NONE',canApprove:false,canReview:false}, PLAN_MAP={};
+    // Reuse identical requestId across retries until confirmed; avoid duplicate Drive uploads.
+    var REQUEST_KEYS={};var BUSY={};
+    function stableReq(k,fingerprint){
+      var existing=REQUEST_KEYS[k],fp=String(fingerprint||'');
+      if(existing && existing.fingerprint===fp)return existing.value;
+      var value=genReq(k); REQUEST_KEYS[k]={fingerprint:fp,value:value};return value;
+    }
+    function clearReq(k){delete REQUEST_KEYS[k];}
+    function setBusy(formId,on,msg){
+      BUSY[formId]=!!on;
+      var form=$(formId);if(!form)return;
+      form.setAttribute('aria-busy',on?'true':'false');
+      Array.prototype.forEach.call(form.querySelectorAll('button[type="submit"]'),function(btn){
+        if(!btn.hasAttribute('data-orig-text'))btn.setAttribute('data-orig-text',btn.textContent);
+        btn.disabled=!!on;
+        btn.textContent=on?(msg||'กำลังบันทึก...'):btn.getAttribute('data-orig-text');
+      });
+    }
+    function applyReviewActionOptions(){
+      var sel=$('revAct');if(!sel)return;
+      Array.prototype.forEach.call(sel.options,function(o){
+        o.disabled=(o.value==='APPROVED')?!ROLE.canApprove:(ROLE.role!=='REVIEWER');
+      });
+      if(sel.selectedOptions.length && sel.selectedOptions[0].disabled){
+        var first=Array.from(sel.options).find(function(o){return !o.disabled;});
+        if(first)sel.value=first.value;
+      }
+      $('reviewForm').querySelector('button[type="submit"]').disabled=
+        !Array.from(sel.options).some(function(o){return !o.disabled;});
+    }
+    $('logoutBtn').addEventListener('click',function(){
+      SESSION_TOKEN=''; ROLE={role:'NONE',canApprove:false,canReview:false}; PLAN_MAP={};
+      REQUEST_KEYS={};BUSY={};
+      ['createForm','submitForm','reviewForm','assignForm'].forEach(function(id){setBusy(id,false);});
+      $('workArea').style.display='none'; $('authCard').style.display='block';
+      $('loginPin').value='';$('personnelId').value='';
+      $('actorMeta').textContent='ออกจากหน้านี้แล้ว (Session เซิร์ฟเวอร์จะหมดอายุตามนโยบายระบบเดิม)';
+    });
+
+    async function loadDash(){
+      try {
+        if(!SESSION_TOKEN){
+          $('actorMeta').textContent='ยังไม่ได้เข้าสู่ระบบ';
+          showWarn('กรุณาเข้าสู่ระบบด้วยบัญชีเดิม');
+          return;
+        }
+        var r = await rpc('lp_dashboard', [SESSION_TOKEN]);
+        if(!r||!r.ok){
+          $('actorMeta').textContent='❌ '+(r&&r.error||'auth fail');
+          showErr('โหลดแดชบอร์ดไม่ได้: '+(r&&r.error||'unknown'));
+          return;
+        }
+        $('actorMeta').textContent='ผู้ใช้: '+r.actor+' | บทบาท: '+r.role;
+        ROLE={role:r.role,canApprove:r.canApprove,canReview:r.canReview}; PLAN_MAP={};
+        applyReviewActionOptions();
+        $('adminCard').style.display=(r.role==='ACADEMIC_ADMIN')?'block':'none';
+        var selAdmin=$('assignPlan');
+        selAdmin.replaceChildren(new Option('-- เลือกแผน --',''));
+        (r.adminQueue||[]).forEach(function(p){
+          var o=new Option(p.planId+' — '+(p.title||''),p.planId);
+          selAdmin.add(o);
+        });
+        $('assignForm').querySelector('button[type="submit"]').disabled=r.canAssign!==true;
+        var allowSubmit=r.canSubmit===true;
+        ['createForm','submitForm'].forEach(function(id){
+          var form=$(id), button=form.querySelector('button[type="submit"]');
+          if(button)button.disabled=!allowSubmit;
+          form.setAttribute('data-runtime-enabled',allowSubmit?'true':'false');
+        });
+        if(!allowSubmit)showWarn('ยังไม่เปิดรับส่งแผนในระบบจริง กรุณาติดต่อผู้ดูแลระบบ');
+        var b=$('roleBadge'); b.textContent=r.role;
+        b.className='badge'+(r.role==='REVIEWER'?' reviewer':r.role==='APPROVER'?' approver':'');
+        $('myCount').textContent=r.myPlans.length;
+        var tb=$('myTbl').querySelector('tbody'); tb.innerHTML='';
+        r.myPlans.forEach(function(p){PLAN_MAP[p.planId]=p;
+          var tr=document.createElement('tr');
+          tr.innerHTML='<td>'+esc(p.planId)+'</td><td>'+esc(p.title||'')+'</td>'+
+            '<td><span class="state '+safeState(p.state)+'">'+safeState(p.state)+'</span></td>'+
+            '<td><button data-id="'+esc(p.planId)+'" class="dl">ดาวน์โหลด</button></td>';
+          tb.appendChild(tr);
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('.dl'),function(x){
+          x.addEventListener('click',function(){dlPdf(x.getAttribute('data-id'));});});
+        var sel=$('planSel'); sel.innerHTML='<option value="">-- เลือกแผน --</option>';
+        r.myPlans.forEach(function(p){
+          if(['DRAFT','REVISION_REQUESTED'].indexOf(String(p.state))<0)return;
+          var o=document.createElement('option');
+          o.value=p.planId;o.textContent=p.planId+' - '+(p.title||'');sel.appendChild(o);
+        });
+        if(r.canReview){
+          $('revCol').style.display='block';
+          $('reviewerCard').style.display='block';
+          $('revCount').textContent=r.reviewQueue.length;
+          var rtb=$('revTbl').querySelector('tbody'); rtb.innerHTML='';
+          var revSelect=$('revPlan');revSelect.replaceChildren(new Option('-- เลือกแผนจากคิวตรวจ --',''));
+          r.reviewQueue.forEach(function(p){PLAN_MAP[p.planId]=p;
+            revSelect.add(new Option(p.planId+' — '+(p.title||''),p.planId));
+            var tr=document.createElement('tr');
+            tr.innerHTML='<td>'+esc(p.planId)+'</td><td>'+esc(p.title||'')+'</td>'+
+              '<td><span class="state '+safeState(p.state)+'">'+safeState(p.state)+'</span></td>';
+            rtb.appendChild(tr);
+          });
+        }
+        if(!r.canReview){
+          $('revCol').style.display='none';$('reviewerCard').style.display='none';
+        }
+        if(r.role==='TEACHER' && !r.canReview){
+          showWarn('บทบาท TEACHER (sandbox) - การตรวจ/อนุมัติถูกปิดจนกว่าจะมี ROLE_BINDINGS ที่ลงนามจาก School Core');
+        }
+      } catch(e){ showErr('Dashboard error: '+e.message); }
+    }
+
+    function dlPdf(planId){
+      rpc('lp_downloadPdf',[SESSION_TOKEN,planId]).then(function(r){
+        if(!r.ok){showErr('ดาวน์โหลดไม่สำเร็จ: '+r.error);return;}
+        var bin=atob(r.data); var a=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+        var blob=new Blob([a],{type:r.mimeType||'application/pdf'});
+        var url=URL.createObjectURL(blob);
+        var lnk=document.createElement('a');
+        lnk.href=url; lnk.download=r.filename||(planId+'.pdf'); lnk.click();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        showOk('ดาวน์โหลดสำเร็จ');
+      }).catch(function(e){showErr(e.message);});
+    }
+
+    $('createForm').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      if(!SESSION_TOKEN){showErr('กรุณาเข้าสู่ระบบก่อน');return;}
+      if(BUSY.createForm)return;
+      if($('createForm').getAttribute('data-runtime-enabled')!=='true'){
+        showErr('ระบบยังไม่เปิดรับแผน');return;
+      }
+      var p={title:$('title').value.trim(),academicYear:$('ay').value.trim(),
+        term:$('term').value,subjectRef:$('subj').value.trim(),
+        classRef:$('cls').value.trim()};
+      p.requestId=stableReq('CR',JSON.stringify(p));
+      if(!p.title){showErr('กรุณากรอกชื่อแผน');return;}
+      setBusy('createForm',true,'กำลังสร้างแผน...');
+      try {
+        var r=await rpc('lp_createDraft',[SESSION_TOKEN,p]);
+        if(!r.ok){showErr('สร้างไม่สำเร็จ: '+r.error);return;}
+        clearReq('CR');
+        showOk('สร้างแผนสำเร็จ: '+r.planId+(r.replayed?' (บันทึกซ้ำถูกป้องกัน)':''));
+        $('title').value=''; await loadDash();
+      } catch(e){showErr('สร้างแผนไม่สำเร็จ โปรดลองคำขอเดิมอีกครั้ง');}
+      finally{setBusy('createForm',false);}
+    });
+
+    $('submitForm').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      if(!SESSION_TOKEN){showErr('กรุณาเข้าสู่ระบบก่อน');return;}
+      if(BUSY.submitForm)return;
+      if($('submitForm').getAttribute('data-runtime-enabled')!=='true'){
+        showErr('ระบบยังไม่เปิดรับแผน');return;
+      }
+      var planId=$('planSel').value; var f=$('pdfFile').files[0];
+      if(!planId){showErr('เลือกแผน');return;}
+      if(!f){showErr('เลือกไฟล์ PDF');return;}
+      if(f.size>10*1024*1024){showErr('ไฟล์เกิน 10MB');return;}
+      setBusy('submitForm',true,'กำลังอัปโหลด PDF...');
+      try {
+        var buf=await f.arrayBuffer();
+        var b=new Uint8Array(buf); var bin=''; var CH=0x8000;
+        for(var i=0;i<b.length;i+=CH) bin+=String.fromCharCode.apply(null,b.subarray(i,i+CH));
+        var ver=(PLAN_MAP[planId]||{}).rowVersion;
+        var req=stableReq('SR',[planId,ver,f.name,f.size,f.lastModified].join('|'));
+        var r=await rpc('lp_submitRevision',[SESSION_TOKEN,{
+          planId:planId,pdfBase64:btoa(bin),filename:f.name,mimeType:'application/pdf',
+          expectedVersion:ver,requestId:req}]);
+        if(!r.ok){
+          if(r.quarantined) showErr('ไฟล์ถูกกักกัน: '+r.error);
+          else showErr('ส่งไม่สำเร็จ: '+r.error);
+          return;
+        }
+        clearReq('SR');
+        showOk('รับไฟล์เพื่อรอตรวจความปลอดภัย Revision: '+r.revisionId+' SHA256: '+(r.sha||'').substring(0,12)+'…');
+        $('pdfFile').value='';
+        await loadDash();
+      } catch(e){showErr('ส่งไฟล์ไม่สำเร็จ โปรดลองคำขอเดิมอีกครั้ง');}
+      finally{setBusy('submitForm',false);}
+    });
+
+    $('reviewForm').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      if(BUSY.reviewForm)return;
+      var p={planId:$('revPlan').value.trim(),toState:$('revAct').value,
+        notes:$('revNotes').value.trim(),
+        revisionId:(PLAN_MAP[$('revPlan').value.trim()]||{}).revisionId,
+        expectedVersion:(PLAN_MAP[$('revPlan').value.trim()]||{}).rowVersion,
+        confirmHumanDecision:$('revAct').value==='APPROVED' && ROLE.canApprove
+          ?window.confirm('ยืนยันการดำเนินการตามอำนาจที่ได้รับมอบหมายจริงใช่หรือไม่?'):false,
+        requestId:null};
+      p.requestId=stableReq('RV',JSON.stringify(p));
+      if(!SESSION_TOKEN){showErr('กรุณาเข้าสู่ระบบก่อน');return;}
+      if(!p.planId){showErr('กรอกรหัสแผน');return;}
+      if(p.toState==='APPROVED'&&!p.confirmHumanDecision){showErr('ยกเลิกการอนุมัติ');return;}
+      setBusy('reviewForm',true,'กำลังบันทึกผลตรวจ...');
+      try {
+        var r=await rpc('lp_transitionReview',[SESSION_TOKEN,p]);
+        if(!r.ok){showErr('ไม่สำเร็จ: '+r.error);return;}
+        clearReq('RV');
+        showOk('เปลี่ยนสถานะ: '+r.fromState+' → '+r.toState);
+        await loadDash();
+      } catch(e){showErr('บันทึกผลตรวจไม่สำเร็จ โปรดลองคำขอเดิมอีกครั้ง');}
+      finally{setBusy('reviewForm',false);}
+    });
+
+    $('assignForm').addEventListener('submit',async function(ev){
+      ev.preventDefault();
+      if(!SESSION_TOKEN||BUSY.assignForm)return;
+      if(ROLE.role!=='ACADEMIC_ADMIN'){showErr('ไม่มีสิทธิ์มอบหมาย');return;}
+      var payload={
+        planId:$('assignPlan').value,
+        reviewerPersonnelId:$('assignReviewer').value.trim(),
+        dueAt:$('assignDue').value
+      };
+      if(!payload.planId||!payload.reviewerPersonnelId||!payload.dueAt){showErr('กรอกข้อมูลให้ครบ');return;}
+      payload.requestId=stableReq('ASG',JSON.stringify(payload));
+      setBusy('assignForm',true,'กำลังมอบหมาย...');
+      try{
+        var r=await rpc('lp_assignReviewer',[SESSION_TOKEN,payload]);
+        if(!r||!r.ok){showErr('มอบหมายไม่สำเร็จ: '+(r&&r.error||'error'));return;}
+        clearReq('ASG');showOk('มอบหมายผู้ตรวจสำเร็จ '+r.assignmentId);
+        await loadDash();
+      }catch(e){showErr('ไม่สามารถมอบหมาย โปรดลองคำขอเดิมอีกครั้ง');}
+      finally{setBusy('assignForm',false);}
+    });
+
+    // Error boundary
+    window.addEventListener('error',function(ev){showErr('Runtime error: '+ev.message);});
+    window.addEventListener('unhandledrejection',function(ev){showErr('Async error: '+(ev.reason&&ev.reason.message||ev.reason));});
+
+    probeLessonPlanBackend();
+  </script>
+</body>
+</html>
